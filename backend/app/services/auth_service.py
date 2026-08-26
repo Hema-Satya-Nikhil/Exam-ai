@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
+from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
@@ -43,12 +44,49 @@ class AuthService:
         return security.verify_password(plain, hashed)
 
     # ------------------------------------------------------------------
+    # Registration
+    # ------------------------------------------------------------------
+    async def register_faculty(self, session: AsyncSession, email: str, full_name: str, password: str,
+                               role: str = "faculty") -> User:
+        """Self-register a new faculty member.
+
+        The account is created **inactive** (``is_active=False``) so an
+        administrator must approve it before the user can sign in. To prevent
+        privilege escalation the only accepted role is ``faculty`` — any other
+        value is coerced to ``faculty``. The faculty role is created on demand.
+        """
+        from app.services.admin_service import get_or_create_role  # local import avoids cycle
+
+        safe_role = role if role == "faculty" else "faculty"
+        role_obj = await get_or_create_role(session, safe_role, "Faculty member")
+
+        existing = await self.get_user_by_email(session, email)
+        if existing is not None:
+            return existing
+
+        user = User(
+            email=email,
+            full_name=full_name,
+            password_hash=self.hash_password(password),
+            is_active=False,  # pending admin approval
+            roles=[role_obj],
+        )
+        session.add(user)
+        await session.flush()
+        return user
+
+    # ------------------------------------------------------------------
     # User lookup
     # ------------------------------------------------------------------
 
     @staticmethod
     async def get_user_by_email(session: AsyncSession, email: str) -> User | None:
-        result = await session.execute(select(User).where(User.email == email))
+        # Emails are case-insensitive by convention; match ignoring case and
+        # surrounding whitespace so login/refresh never spuriously fail on
+        # different casing than the stored value.
+        result = await session.execute(
+            select(User).where(func.lower(User.email) == email.strip().lower())
+        )
         return result.scalars().first()
 
     @staticmethod

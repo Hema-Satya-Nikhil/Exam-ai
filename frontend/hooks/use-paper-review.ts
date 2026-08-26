@@ -3,10 +3,11 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import {
   approvePaper,
-  exportPaper,
+  downloadPaper,
   getPaperDraft,
   lockPaperQuestion,
   regeneratePaperQuestion,
+  unlockPaperQuestion,
   updatePaperQuestion
 } from '@/lib/api';
 
@@ -14,13 +15,13 @@ export function usePaperDraft(paperId: string) {
   return useQuery({
     queryKey: ['paper-draft', paperId],
     queryFn: () => getPaperDraft(paperId),
-    enabled: Boolean(paperId)
+    enabled: Boolean(paperId) && paperId !== 'draft-placeholder'
   });
 }
 
 export function usePaperQuestionUpdate() {
   return useMutation({
-    mutationFn: (payload: { paper_id: string; question_number: number; updates: any }) =>
+    mutationFn: (payload: { paper_id: string; question_number: number; updates: Record<string, unknown> }) =>
       updatePaperQuestion(payload.paper_id, payload.question_number, payload.updates)
   });
 }
@@ -29,6 +30,13 @@ export function usePaperLock() {
   return useMutation({
     mutationFn: (payload: { paper_id: string; question_number: number }) =>
       lockPaperQuestion(payload.paper_id, payload.question_number)
+  });
+}
+
+export function usePaperUnlock() {
+  return useMutation({
+    mutationFn: (payload: { paper_id: string; question_number: number }) =>
+      unlockPaperQuestion(payload.paper_id, payload.question_number)
   });
 }
 
@@ -48,7 +56,7 @@ export function usePaperApproval() {
 
 export function usePaperExport() {
   return useMutation({
-    mutationFn: (payload: { paper_json: any; format: 'pdf' | 'docx' }) =>
-      exportPaper(payload.paper_json, payload.format)
+    mutationFn: (payload: { paper_id: string; format: 'pdf' | 'docx' }) =>
+      downloadPaper(payload.paper_id, payload.format)
   });
 }

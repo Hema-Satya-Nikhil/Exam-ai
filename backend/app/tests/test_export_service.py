@@ -740,3 +740,136 @@ async def test_export_approved_paper_can_be_reexported(
     assert paper is not None
     assert paper.status == "approved", f"Expected status 'approved', got {paper.status!r}"
 
+# ---------------------------------------------------------------------------
+# REGRESSION — ExportAudit.approved_version ALWAYS references the REAL
+# approved PaperVersion.id (never a fabricated label like "v1").
+#
+# Covers the exact failure mode seen with freshly generated async papers:
+# the in-memory draft copy can carry a bogus/missing version marker while the
+# authoritative version row lives in PostgreSQL. Export must resolve the UUID
+# from the database and record that identical UUID — for both PDF and DOCX,
+# across repeated exports.
+# ---------------------------------------------------------------------------
+
+async def test_export_audit_uses_real_version_uuid_when_paper_json_marker_is_bogus(
+    async_client: AsyncClient,
+    faculty_token: str,
+) -> None:
+    """Fresh generated paper: audit.refs the PaperVersion UUID from Postgres."""
+    paper_id = str(uuid4())
+    version_id = str(uuid4())
+
+    async with TestSession() as session:
+        job_row = GenerationJob(
+            blueprint_id="unused",
+            status="completed",
+            current_step="done",
+            progress_percent=100,
+        )
+        session.add(job_row)
+        await session.flush()
+
+        paper = GeneratedPaper(
+            id=paper_id,
+            generation_job_id=job_row.id,
+            title="Freshly Generated Paper",
+            status="approved",
+        )
+        session.add(paper)
+        await session.flush()
+
+        # The persisted paper_json deliberately carries the legacy/bogus marker
+        # ("v1") that the old export code would have written into the audit row.
+        bogus_json = _make_paper_json(version_id)
+        bogus_json["version_id"] = "v1"
+
+        version = PaperVersion(
+            id=version_id,
+            generated_paper_id=paper.id,
+            version_number=1,
+            paper_json=bogus_json,
+            blueprint_version={},
+            rules_version={},
+            validation_summary={},
+        )
+        session.add(version)
+        await session.flush()
+        paper.current_version_id = version.id
+        await session.commit()
+
+    # PDF export
+    pdf_resp = await async_client.post(
+        "/api/papers/export",
+        json={"paper_id": paper_id, "format": "pdf"},
+        headers={"Authorization": f"Bearer {faculty_token}"},
+    )
+    assert pdf_resp.status_code == 200, pdf_resp.text
+
+    # DOCX export (same approved paper -> second, independent audit row)
+    docx_resp = await async_client.post(
+        "/api/papers/export",
+        json={"paper_id": paper_id, "format": "docx"},
+        headers={"Authorization": f"Bearer {faculty_token}"},
+    )
+    assert docx_resp.status_code == 200, docx_resp.text
+
+    audits = await _query_export_audits(paper_id)
+    assert len(audits) == 2, f"Expected 2 audit rows, got {len(audits)}"
+    assert {a.format for a in audits} == {ExportFormat.pdf, ExportFormat.docx}
+    # Every audit row references the ACTUAL approved PaperVersion.id — never "v1"
+    assert {a.approved_version for a in audits} == {version_id}, (
+        f"approved_version must be the real version UUID {version_id}, got "
+        f"{[a.approved_version for a in audits]}"
+    )
+
+
+async def test_export_audit_resolves_latest_version_when_current_version_id_unset(
+    async_client: AsyncClient,
+    faculty_token: str,
+) -> None:
+    """Fallback: if current_version_id is NULL, use the highest version_number."""
+    paper_id = str(uuid4())
+    version_id = str(uuid4())
+
+    async with TestSession() as session:
+        job_row = GenerationJob(
+            blueprint_id="unused",
+            status="completed",
+            current_step="done",
+            progress_percent=100,
+        )
+        session.add(job_row)
+        await session.flush()
+
+        paper = GeneratedPaper(
+            id=paper_id,
+            generation_job_id=job_row.id,
+            title="Legacy Paper",
+            status="approved",
+            current_version_id=None,  # FK column was left unset
+        )
+        session.add(paper)
+        await session.flush()
+
+        version = PaperVersion(
+            id=version_id,
+            generated_paper_id=paper.id,
+            version_number=3,  # latest version
+            paper_json=_make_paper_json("v1"),
+            blueprint_version={},
+            rules_version={},
+            validation_summary={},
+        )
+        session.add(version)
+        await session.commit()
+
+    resp = await async_client.post(
+        "/api/papers/export",
+        json={"paper_id": paper_id, "format": "pdf"},
+        headers={"Authorization": f"Bearer {faculty_token}"},
+    )
+    assert resp.status_code == 200, resp.text
+
+    audits = await _query_export_audits(paper_id)
+    assert len(audits) == 1
+    assert audits[0].approved_version == version_id

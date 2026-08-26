@@ -1,19 +1,15 @@
-module.exports = {
+const nextJest = require('next/jest');
+
+const createJestConfig = nextJest({ dir: './' });
+
+const customJestConfig = {
   testEnvironment: 'jsdom',
-  testEnvironmentOptions: {
-    url: 'http://localhost:3000'
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
+  moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/$1'
   },
-  collectCoverage: true,
-  coverageDirectory: '<rootDir>/coverage',
-  coverageReporters: ['json', 'text', 'lcov', 'clover'],
-  moduleFileExtensions: ['js', '.jsx', '.ts', '.tsx', '.json'],
-  moduleName: 'ExamCraftAI',
-  roots: ['<rootDir>/app/tests'],
-  setupFiles: ['<rootDir>/app/setupTests.js'],
-  testMatch: [
-    '**/app/tests/**/*.{js,.jsx,.ts,.tsx}'
-  ],
-  transform: {
-    '^.+\\.(js|jsx|ts|tsx)$': 'babel-jest'
-  }
+  testPathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/.next/'],
+  collectCoverage: false
 };
+
+module.exports = createJestConfig(customJestConfig);

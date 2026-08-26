@@ -27,10 +27,14 @@ class Settings(BaseSettings):
     nvidia_base_url: str = Field(default="https://integrate.api.nvidia.com/v1", alias="NVIDIA_BASE_URL")
     nvidia_model: str = Field(default="", alias="NVIDIA_MODEL")
     secret_key: str = Field(default="change-me", alias="SECRET_KEY")
+    admin_email: str = Field(default="", alias="ADMIN_EMAIL")
+    admin_password: str = Field(default="", alias="ADMIN_PASSWORD")
     jwt_refresh_expire_days: int = Field(default=7, alias="JWT_REFRESH_EXPIRE_DAYS")
     max_upload_size: int = Field(default=52428800, alias="MAX_UPLOAD_SIZE")
     llm_timeout: int = Field(default=90, alias="LLM_TIMEOUT")
     llm_max_retries: int = Field(default=3, alias="LLM_MAX_RETRIES")
+    llm_stub: bool = Field(default=False, alias="LLM_STUB")
+    generation_concurrency: int = Field(default=1, alias="GENERATION_CONCURRENCY")
     cors_origins: str = Field(default="http://localhost:3000", alias="CORS_ORIGINS")
 
 

@@ -1,20 +1,5 @@
 import Link from 'next/link';
-import { ArrowRight, FileText, ShieldCheck, Sparkles } from 'lucide-react';
-
-const highlights = [
-  {
-    title: 'Deterministic blueprint control',
-    description: 'Academic rules stay in the backend, while the model only generates controlled wording.'
-  },
-  {
-    title: 'Versioned faculty workflow',
-    description: 'Every syllabus, blueprint, validation result, and approval step is tracked.'
-  },
-  {
-    title: 'Liquid glass review surface',
-    description: 'A premium, low-noise interface built for actual departmental use.'
-  }
-];
+import { ArrowRight, FileText, ShieldCheck } from 'lucide-react';
 
 export default function HomePage() {
   return (
@@ -26,15 +11,15 @@ export default function HomePage() {
         <div className="grid gap-10 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
           <div className="space-y-8">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/60 px-4 py-2 text-sm font-medium text-slate-700 shadow-glass backdrop-blur-glass">
-              <Sparkles className="h-4 w-4 text-slate-500" />
-              ExamCraft AI
+              <ShieldCheck className="h-4 w-4 text-slate-500" />
+              ExamCraft
             </div>
             <div className="space-y-5">
               <h1 className="max-w-3xl text-5xl font-semibold tracking-tight text-slate-950 md:text-7xl">
-                Exam papers with governed generation and clean faculty review.
+                Trusted question papers, built by faculty.
               </h1>
               <p className="max-w-2xl text-lg leading-8 text-slate-600 md:text-xl">
-                Faculty define the blueprint, the backend enforces the academic rules, and NVIDIA generates only constrained question text.
+                Create your question paper — configure the syllabus, paper structure, question distribution, and evaluation criteria before generation.
               </p>
             </div>
             <div className="flex flex-wrap gap-4">
@@ -47,41 +32,32 @@ export default function HomePage() {
               </Link>
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
-              <MetricPill label="Blueprints" value="Validated" />
-              <MetricPill label="LLM output" value="Constrained" />
-              <MetricPill label="Review flow" value="Versioned" />
+              <MetricPill label="Blueprint" value="Faculty-defined" />
+              <MetricPill label="Structure" value="Validated" />
+              <MetricPill label="Release" value="Approved" />
             </div>
           </div>
 
           <div className="glass-panel space-y-4 rounded-[2rem] border border-white/60 bg-white/60 p-5 shadow-glass backdrop-blur-glass">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-sm font-medium uppercase tracking-[0.2em] text-slate-500">System status</p>
-                <h2 className="mt-1 text-xl font-semibold text-slate-900">Ready for faculty workflows</h2>
+                <p className="text-sm font-medium uppercase tracking-[0.2em] text-slate-500">Paper rules</p>
+                <h2 className="mt-1 text-xl font-semibold text-slate-900">Every paper is checked before release</h2>
               </div>
-              <ShieldCheck className="h-6 w-6 text-emerald-600" />
+              <FileText className="h-6 w-6 text-emerald-600" />
             </div>
             <div className="rounded-3xl border border-slate-200/70 bg-slate-950 px-4 py-4 text-white shadow-lg shadow-slate-950/20">
               <div className="flex items-center gap-3 text-sm font-medium text-slate-300">
-                <FileText className="h-4 w-4" />
-                Blueprint validation pipeline
+                <ShieldCheck className="h-4 w-4" />
+                Quality checks
               </div>
               <div className="mt-4 grid gap-3 text-sm">
-                <div className="rounded-2xl bg-white/10 px-4 py-3">Structure validation</div>
-                <div className="rounded-2xl bg-white/10 px-4 py-3">Unit scope verification</div>
-                <div className="rounded-2xl bg-white/10 px-4 py-3">Bloom and duplication checks</div>
+                <div className="rounded-2xl bg-white/10 px-4 py-3">Structure matches the total marks</div>
+                <div className="rounded-2xl bg-white/10 px-4 py-3">Coverage of selected units</div>
+                <div className="rounded-2xl bg-white/10 px-4 py-3">Duplicate and scope checks</div>
               </div>
             </div>
           </div>
-        </div>
-
-        <div className="mt-14 grid gap-4 md:grid-cols-3">
-          {highlights.map((item) => (
-            <article key={item.title} className="glass-panel rounded-[1.75rem] border border-white/60 bg-white/50 p-6 shadow-glass backdrop-blur-glass">
-              <h3 className="text-lg font-semibold text-slate-900">{item.title}</h3>
-              <p className="mt-2 text-sm leading-6 text-slate-600">{item.description}</p>
-            </article>
-          ))}
         </div>
       </section>
     </main>

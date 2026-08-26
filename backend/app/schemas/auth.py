@@ -13,6 +13,27 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class RegisterRequest(BaseModel):
+    """Self-registration request for a new FACULTY member.
+
+    ``role`` is accepted only to keep the client payload self-describing; the
+    server ignores any value other than ``faculty`` so end users can never
+    self-promote to ``admin`` (admin accounts are bootstrapped exclusively via
+    ``seed_admin``).
+    """
+
+    email: EmailStr
+    full_name: str = Field(..., min_length=1, max_length=255)
+    password: str = Field(..., min_length=8)
+    role: RoleName = "faculty"
+
+
+class RegisterResponse(BaseModel):
+    user_id: str
+    email: EmailStr
+    status: str = "pending"
+
+
 class RefreshRequest(BaseModel):
     refresh_token: str
 

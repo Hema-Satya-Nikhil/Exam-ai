@@ -15,7 +15,13 @@ the app models:
 
 from __future__ import annotations
 
-import bcrypt as _bcrypt
+import os
+
+# Mark the process as the test environment BEFORE app modules are imported so
+# startup hooks (e.g. generation-job resume) skip production side effects.
+os.environ.setdefault("APP_ENV", "TEST")
+
+import bcrypt as _bcrypt  # noqa: E402
 from sqlalchemy import JSON
 from sqlalchemy.dialects.sqlite.base import SQLiteTypeCompiler
 

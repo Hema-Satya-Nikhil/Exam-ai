@@ -74,8 +74,13 @@ class GenerationRepository:
         )
         return result.scalars().all()
 
-    async def create_paper(self, job_id: str, title: str) -> GeneratedPaper:
-        paper = GeneratedPaper(generation_job_id=job_id, title=title, status="draft")
+    async def create_paper(self, job_id: str, title: str, paper_id: str | None = None) -> GeneratedPaper:
+        paper = GeneratedPaper(
+            id=paper_id,
+            generation_job_id=job_id,
+            title=title,
+            status="draft",
+        )
         self.session.add(paper)
         await self.session.flush()
         return paper

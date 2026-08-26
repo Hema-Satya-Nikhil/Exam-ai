@@ -5,6 +5,7 @@ from uuid import uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.repositories.generation_repository import GenerationRepository
 from app.schemas.academic import GeneratedQuestionRead, PaperBlueprint, QuestionRequirement
 from app.schemas.generation import BatchGenerationResult, GenerationJobCreate, GenerationJobRead, ValidationIssue, ValidationSummary
@@ -41,7 +42,13 @@ class GenerationService:
     async def generate_paper_from_blueprint(self, payload: GenerationJobCreate) -> BatchGenerationResult:
         validation = self.validator.validate_blueprint(payload.blueprint)
         if not validation.passed:
-            raise ValueError("Blueprint validation failed before generation.")
+            # Surface the actual blocking rules so the faculty can fix the
+            # blueprint instead of staring at an opaque rejection.
+            blocking = [issue for issue in validation.issues if issue.severity == "error"]
+            detail = "; ".join(f"{issue.message} [{issue.code}]" for issue in blocking)
+            raise ValueError(
+                "Blueprint validation failed before generation. " + detail
+            )
 
         job = await self.create_job_async(payload) if self.repo else self.create_job(payload)
         running_job = await self.mark_job_running_async(job.id, "Generating question set", 15) if self.repo else self.mark_job_running(job.id, "Generating question set", 15)
@@ -88,26 +95,41 @@ class GenerationService:
         return BatchGenerationResult(job=completed, paper_id=draft.id, paper_json=paper_json, validation=validation)
 
     async def generate_single_question(self, requirement: QuestionRequirement, source_context: str) -> GeneratedQuestionRead:
-        payload = await self.provider.generate_question(requirement, source_context)
-        question_text = str(payload.get("question_text", "")).strip()
-        validation = self.validator.validate_question(requirement, question_text)
-        if not validation.passed:
-            raise ValueError("Generated question failed validation.")
+        # Generate -> validate -> feed the exact rule violations back to the
+        # model and retry. Every academic rule stays enforced; the loop only
+        # gives the provider the chance to comply before we fail.
+        feedback: str | None = None
+        last_issues: list[str] = []
+        max_attempts = max(1, settings.llm_max_retries + 1)
 
-        return GeneratedQuestionRead(
-            question_number=requirement.question_number,
-            section=requirement.section,
-            marks=requirement.marks,
-            unit=requirement.unit,
-            topic=requirement.topic,
-            bloom_level=requirement.bloom_level,
-            difficulty=requirement.difficulty,
-            question_type=requirement.question_type,
-            choice_group=requirement.choice_group,
-            generation_instruction=requirement.generation_instruction,
-            question_text=question_text,
-            source_references=list(payload.get("source_references", [])),
-            locked=False,
+        for attempt in range(1, max_attempts + 1):
+            payload = await self.provider.generate_question(requirement, source_context, feedback)
+            question_text = str(payload.get("question_text", "")).strip()
+            validation = self.validator.validate_question(requirement, question_text)
+            if validation.passed:
+                return GeneratedQuestionRead(
+                    question_number=requirement.question_number,
+                    section=requirement.section,
+                    marks=requirement.marks,
+                    unit=requirement.unit,
+                    topic=requirement.topic,
+                    bloom_level=requirement.bloom_level,
+                    difficulty=requirement.difficulty,
+                    question_type=requirement.question_type,
+                    choice_group=requirement.choice_group,
+                    generation_instruction=requirement.generation_instruction,
+                    question_text=question_text,
+                    source_references=list(payload.get("source_references", [])),
+                    locked=False,
+                )
+            last_issues = [
+                f"{issue.message} [{issue.code}]" for issue in validation.issues
+            ]
+            feedback = "\n".join(last_issues) if attempt < max_attempts else None
+
+        raise ValueError(
+            "Generated question failed validation after "
+            f"{max_attempts} attempts: " + "; ".join(last_issues)
         )
 
     def _context_for_requirement(self, blueprint: PaperBlueprint, requirement: QuestionRequirement) -> str:

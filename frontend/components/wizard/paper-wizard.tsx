@@ -1,618 +1,1113 @@
 'use client';
 
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
-import { useFieldArray, useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft, ArrowRight, CheckCircle2, CopyPlus, FileText, Layers3, Loader2, Sparkles, Trash2, Upload } from 'lucide-react';
-import { usePaperGeneration } from '@/hooks/use-generation';
-import { uploadModelPaper, uploadSyllabus, uploadUnitMaterial } from '@/lib/api';
+import {
+  ArrowLeft,
+  ArrowRight,
+  CheckCircle2,
+  FileCheck2,
+  LayoutGrid,
+  Loader2,
+  RefreshCw,
+  Sparkles
+} from 'lucide-react';
 
-const questionRowSchema = z.object({
-  questionNumber: z.coerce.number().int().min(1),
-  section: z.string().min(1),
-  marks: z.coerce.number().int().min(1),
-  unit: z.coerce.number().int().min(1),
-  topic: z.string().min(1),
-  bloomLevel: z.enum(['L2', 'L3', 'L4', 'L5', 'L6']),
-  difficulty: z.enum(['easy', 'medium', 'hard']),
-  questionType: z.string().min(1),
-  internalChoice: z.string().optional().default('')
-});
+import { useAuth } from '@/contexts/auth-context';
+import { confirmSyllabus, getGenerationJob, queueGenerationJob, resumeGenerationJob, uploadModelPaper, uploadSyllabus, uploadUnitMaterial, validateBlueprint } from '@/lib/api';
+import type { GenerationJobSnapshot, ModelPaperAnalysis, UploadModelPaperResult, UploadSyllabusResult, UploadUnitMaterialResult } from '@/lib/api';
+import { isTerminal, POLL_INTERVAL_MS } from '@/lib/generation-progress';
+import { BLOOM_OPTIONS, buildBlueprint, DEFAULT_SECTIONS, sectionTotals } from '@/lib/wizard-logic';
+import type { BloomLevel, BlueprintQuestion, SectionConfig, SyllabusUnit } from '@/lib/wizard-logic';
+import { addUnit, normalizeParsedUnits, removeUnit, validationIssues } from '@/lib/syllabus-guide';
+import type { EditableUnit } from '@/lib/syllabus-guide';
+import { GenerationProgressCard } from '@/components/wizard/generation-progress';
+import { SectionBuilder } from '@/components/wizard/section-builder';
+import { Stepper } from '@/components/wizard/stepper';
+import type { StepperItem } from '@/components/wizard/stepper';
+import { UploadDrop } from '@/components/wizard/upload-drop';
 
-const wizardSchema = z.object({
-  mode: z.enum(['model-paper', 'manual']),
-  subject: z.string().min(1),
-  subjectCode: z.string().min(1),
-  examType: z.string().min(1),
-  academicYear: z.string().min(1),
-  totalMarks: z.coerce.number().int().min(1),
-  durationMinutes: z.coerce.number().int().min(1),
-  selectedUnits: z.string().min(1),
-  modelPaperName: z.string().optional(),
-  syllabusFile: z.string().optional(),
-  unitMaterialSummary: z.string().optional(),
-  sections: z.string().min(1),
-  bloomStrategy: z.string().min(1),
-  twoMarkCount: z.coerce.number().int().min(0),
-  questions: z.array(questionRowSchema).min(1)
-});
-
-type WizardValues = z.infer<typeof wizardSchema>;
-
-const defaultQuestions = [
-  {
-    questionNumber: 1,
-    section: 'Part A',
-    marks: 2,
-    unit: 1,
-    topic: 'Introduction to clustering',
-    bloomLevel: 'L2' as const,
-    difficulty: 'easy' as const,
-    questionType: 'conceptual',
-    internalChoice: ''
-  },
-  {
-    questionNumber: 2,
-    section: 'Part A',
-    marks: 2,
-    unit: 1,
-    topic: 'K-means objective',
-    bloomLevel: 'L3' as const,
-    difficulty: 'medium' as const,
-    questionType: 'application',
-    internalChoice: ''
-  }
-];
-
-const stepLabels = [
+const STEP_LABELS = [
   'Subject & Exam',
   'Syllabus',
   'Unit Materials',
-  'Model Paper / Manual',
-  'Blueprint',
-  'Bloom & 2-Mark',
+  'Paper Pattern',
+  'Question Structure',
+  'Blueprint & Bloom',
   'Generate',
-  'Review'
-];
+  'Review & Export'
+] as const;
 
-const sectionPresets = {
-  'model-paper': 'Part A - 2 marks, Part B - 5 marks, Part C - 10 marks',
-  manual: 'Custom sections and internal choice rules defined by faculty'
-};
+type UploadMovement = 'idle' | 'uploading' | 'success' | 'error';
 
 export function PaperWizard() {
+  const { user, loading: authLoading } = useAuth();
+
+  // ---------------------------------------------------------------------
+  // Wizard state (no demo defaults — everything starts empty)
+  // ---------------------------------------------------------------------
   const [step, setStep] = useState(0);
-  const [generatedPaperId, setGeneratedPaperId] = useState<string | null>(null);
+  const [examType, setExamType] = useState('');
+  const [subject, setSubject] = useState('');
+  const [subjectCode, setSubjectCode] = useState('');
+  const [academicYear, setAcademicYear] = useState('');
+  const [totalMarks, setTotalMarks] = useState<number>(70);
+  const [durationMinutes, setDurationMinutes] = useState<number>(180);
+  const [selectedUnits, setSelectedUnits] = useState<number[]>([]);
+
+  const [syllabusStatus, setSyllabusStatus] = useState<UploadMovement>('idle');
+  const [syllabusFileName, setSyllabusFileName] = useState<string>('');
+  const [syllabusUnits, setSyllabusUnits] = useState<SyllabusUnit[]>([]);
+  const [syllabusNotes, setSyllabusNotes] = useState<string[]>([]);
+  const [syllabusError, setSyllabusError] = useState<string | null>(null);
+  const [syllabusConfirmed, setSyllabusConfirmed] = useState(false);
+  // Editable proposed structure — faculty confirm/correct before it becomes
+  // the authoritative syllabus (persisted via POST /api/syllabi/confirm).
+  const [editableUnits, setEditableUnits] = useState<EditableUnit[] | null>(null);
+  const [syllabusIssues, setSyllabusIssues] = useState<string[]>([]);
+  const [syllabusConfirming, setSyllabusConfirming] = useState(false);
+
+  const [materials, setMaterials] = useState<Record<number, string>>({});
+  const [materialStatus, setMaterialStatus] = useState<Record<number, UploadMovement>>({});
+  const [materialErrors, setMaterialErrors] = useState<Record<number, string | null>>({});
+  const [materialsSkipped, setMaterialsSkipped] = useState(false);
+
+  const [patternMode, setPatternMode] = useState<'model-paper' | 'manual' | null>(null);
+  const [modelPaperStatus, setModelPaperStatus] = useState<UploadMovement>('idle');
+  const [modelPaperFileName, setModelPaperFileName] = useState<string>('');
+  const [modelPaperError, setModelPaperError] = useState<string | null>(null);
+  const [modelPaperAnalysis, setModelPaperAnalysis] = useState<ModelPaperAnalysis | null>(null);
+  const [modelPaperConfirmed, setModelPaperConfirmed] = useState(false);
+
+  const [sections, setSections] = useState<SectionConfig[]>(DEFAULT_SECTIONS);
+
+  const [validationResult, setValidationResult] = useState<{ feasibility: string[]; issues: string[]; passed: boolean } | null>(null);
+  const [validating, setValidating] = useState(false);
+
+  const [generating, setGenerating] = useState(false);
   const [generationError, setGenerationError] = useState<string | null>(null);
-  const generatePaper = usePaperGeneration();
+  const [generatedPaperId, setGeneratedPaperId] = useState<string | null>(null);
+  const [generationJobId, setGenerationJobId] = useState<string | null>(null);
+  const [generationStep, setGenerationStep] = useState<string>('');
+  const [jobSnapshot, setJobSnapshot] = useState<GenerationJobSnapshot | null>(null);
+  const [resumingJob, setResumingJob] = useState(false);
 
-  const form = useForm<WizardValues>({
-    resolver: zodResolver(wizardSchema),
-    defaultValues: {
-      mode: 'model-paper',
-      subject: 'Data Mining',
-      subjectCode: 'CSE-402',
-      examType: 'Mid 2',
-      academicYear: '2026-27',
-      totalMarks: 70,
-      durationMinutes: 180,
-      selectedUnits: '3,4,5',
-      modelPaperName: 'Mid 2 Model Paper',
-      syllabusFile: 'uploaded-syllabus.pdf',
-      unitMaterialSummary: 'Unit 3 Notes.pdf, Unit 4 Notes.docx, Unit 5 Notes.pdf',
-      sections: 'Part A, Part B, Part C',
-      bloomStrategy: 'L2 20%, L3 20%, L4 30%, L5 20%, L6 10%',
-      twoMarkCount: 10,
-      questions: defaultQuestions
-    }
-  });
+  const { total: configuredTotal, questionCount } = useMemo(() => sectionTotals(sections), [sections]);
 
-  const { fields, append, remove, insert } = useFieldArray({ control: form.control, name: 'questions' });
-  const mode = form.watch('mode');
-  const questions = form.watch('questions');
+  const marksRemaining = totalMarks - configuredTotal;
 
-  function handleGeneratePaper() {
-    setGenerationError(null);
-    const values = form.getValues();
-    const parsedUnits = values.selectedUnits
-      .split(',')
-      .map((item) => parseInt(item.trim(), 10))
-      .filter((num) => !isNaN(num));
+  // ---------------------------------------------------------------------
+  // Step validity guards (UX only — backend remains authoritative)
+  // ---------------------------------------------------------------------
+  const step0Valid = Boolean(subject.trim()) && Boolean(examType.trim()) && totalMarks > 0 && durationMinutes > 0 && selectedUnits.length > 0;
+  const step1Valid = syllabusConfirmed;
+  const step2Valid = true; // optional — progress is always possible
+  const step3Valid = patternMode !== null && (patternMode === 'manual' || (modelPaperConfirmed && modelPaperAnalysis !== null));
+  const step4Valid = marksRemaining === 0 && sections.length > 0 && sections.every((section) => section.questionCount > 0 && section.marksPerQuestion > 0 && section.name.trim().length > 0);
+  const step5Valid = step4Valid && sections.every((section) => section.bloomLevels.length > 0);
+  const canGenerate = step5Valid;
 
-    const payload = {
-      blueprint: {
-        exam_type: values.examType,
-        subject: values.subject,
-        selected_units: parsedUnits.length ? parsedUnits : [1, 2],
-        total_marks: values.totalMarks,
-        duration_minutes: values.durationMinutes,
-        sections: [
-          {
-            name: 'Part A',
-            section_type: 'short_answer',
-            question_count: values.questions.filter((q) => q.section === 'Part A').length || 1,
-            marks_per_question: 2,
-            instructions: 'Answer all 2-mark questions.'
-          },
-          {
-            name: 'Part B',
-            section_type: 'descriptive',
-            question_count: values.questions.filter((q) => q.section === 'Part B').length || 1,
-            marks_per_question: 10,
-            instructions: 'Answer all descriptive questions.'
-          }
-        ],
-        questions: values.questions.map((q) => ({
-          question_number: q.questionNumber,
-          section: q.section,
-          marks: q.marks,
-          unit: q.unit,
-          topic: q.topic,
-          bloom_level: q.bloomLevel,
-          difficulty: q.difficulty,
-          question_type: q.questionType,
-          choice_group: q.internalChoice || null
-        })),
-        source_mode: values.mode
-      }
+  const stepItems: StepperItem[] = useMemo(() => {
+    const stateFor = (index: number): StepperItem['state'] => {
+      if (index === step) return 'current';
+      if (index < step) return 'completed';
+      if (index === 2) return 'optional';
+      return 'upcoming';
     };
+    const base = STEP_LABELS.map(
+      (label, index) => ({ label, optional: index === 2, state: stateFor(index) } as StepperItem)
+    );
+    if (step1Valid && step < 1) base[0].state = 'completed';
+    return base;
+  }, [step, step1Valid]);
 
-    generatePaper.mutate(payload, {
-      onSuccess: (data: any) => {
-        const id = data.paper_id || data.job?.id || 'draft-placeholder';
-        setGeneratedPaperId(id);
-        setStep(7);
-      },
-      onError: (err: any) => {
-        setGenerationError(err.message || 'Paper generation failed. Please check blueprint rules.');
-      }
+  // ---------------------------------------------------------------------
+  // Upload handlers
+  // ---------------------------------------------------------------------
+  async function handleSyllabusFile(file: File) {
+    setSyllabusError(null);
+    setSyllabusStatus('uploading');
+    setSyllabusConfirmed(false);
+    setSyllabusIssues([]);
+    try {
+      const result: UploadSyllabusResult = await uploadSyllabus(file, subject.trim() || 'default');
+      const units = normalizeParsedUnits(result.parsed?.units ?? []);
+      setSyllabusFileName(result.source_file_name || file.name);
+      setSyllabusUnits(units.map((unit) => ({
+        unit_number: unit.unit_number,
+        title: unit.title || null,
+        topics: unit.topics.map((topic) => ({ topic_name: topic }))
+      })));
+      // Proposed structure is always editable — a scanned page with a low
+      // topic yield is corrected here, never silently accepted or fabricated.
+      setEditableUnits(units);
+      setSyllabusNotes(result.parsed?.notes ?? []);
+      setSyllabusStatus('success');
+    } catch (error) {
+      setSyllabusError(messageOf(error));
+      setSyllabusStatus('error');
+      setSyllabusUnits([]);
+      setEditableUnits(null);
+      setSyllabusNotes([]);
+    }
+  }
+
+  function updateEditableUnit(index: number, patch: Partial<EditableUnit>) {
+    setEditableUnits((current) => {
+      if (!current) return current;
+      return current.map((unit, i) => (i === index ? { ...unit, ...patch } : unit));
     });
   }
 
-  const summary = useMemo(() => {
-    const totalQuestionMarks = questions.reduce((sum, item) => sum + Number(item.marks || 0), 0);
-    const unitList = form.watch('selectedUnits').split(',').map((value) => value.trim()).filter(Boolean);
-
-    return {
-      totalQuestionMarks,
-      unitCount: unitList.length,
-      questionCount: questions.length
-    };
-  }, [form, questions]);
-
-  function nextStep() {
-    setStep((current) => Math.min(current + 1, stepLabels.length - 1));
+  function updateEditableTopics(index: number, raw: string) {
+    const topics = raw
+      .split('\n')
+      .map((line) => line.replace(/^\s*(?:[-•*–—]|\d+[.)]|\([a-z0-9]\))\s*/i, '').trim())
+      .filter(Boolean);
+    updateEditableUnit(index, { topics });
   }
 
-  function previousStep() {
+  async function handleConfirmSyllabus() {
+    if (!editableUnits) return;
+    const issues = validationIssues(editableUnits);
+    if (issues.length) {
+      setSyllabusIssues(issues);
+      return;
+    }
+    setSyllabusIssues([]);
+    setSyllabusConfirming(true);
+    try {
+      await confirmSyllabus(
+        subject.trim() || 'default',
+        syllabusFileName,
+        editableUnits.map((unit) => ({
+          unit_number: unit.unit_number,
+          title: unit.title || null,
+          topics: unit.topics
+        }))
+      );
+      // Confirmed structure becomes the authoritative syllabus for the wizard.
+      setSyllabusUnits(editableUnits.map((unit) => ({
+        unit_number: unit.unit_number,
+        title: unit.title || null,
+        topics: unit.topics.map((topic) => ({ topic_name: topic }))
+      })));
+      setSyllabusConfirmed(true);
+    } catch (error) {
+      setSyllabusIssues([messageOf(error)]);
+    } finally {
+      setSyllabusConfirming(false);
+    }
+  }
+
+  function handleUnitMaterialForUnit(unit: number) {
+    return (file: File) => doUploadUnitMaterial(unit, file);
+  }
+
+  async function doUploadUnitMaterial(unit: number, file: File) {
+    setMaterialErrors((current) => ({ ...current, [unit]: null }));
+    setMaterialStatus((current) => ({ ...current, [unit]: 'uploading' }));
+    try {
+      const result: UploadUnitMaterialResult = await uploadUnitMaterial(file, unit);
+      setMaterials((current) => ({ ...current, [unit]: result.file_name || file.name }));
+      setMaterialStatus((current) => ({ ...current, [unit]: 'success' }));
+      setMaterialsSkipped(false);
+    } catch (error) {
+      setMaterialErrors((current) => ({ ...current, [unit]: messageOf(error) }));
+      setMaterialStatus((current) => ({ ...current, [unit]: 'error' }));
+    }
+  }
+
+  async function handleModelPaperFile(file: File) {
+    setModelPaperError(null);
+    setModelPaperStatus('uploading');
+    setModelPaperConfirmed(false);
+    try {
+      const result: UploadModelPaperResult = await uploadModelPaper(file);
+      setModelPaperFileName(result.source_file_name || file.name);
+      setModelPaperAnalysis(result.analysis ?? null);
+      applyAnalysisToPattern(result.analysis);
+      setModelPaperStatus('success');
+    } catch (error) {
+      setModelPaperError(messageOf(error));
+      setModelPaperStatus('error');
+    }
+  }
+
+  function applyAnalysisToPattern(analysis: ModelPaperAnalysis | null) {
+    if (!analysis) return;
+    if (analysis.total_marks && analysis.total_marks > 0) setTotalMarks(analysis.total_marks);
+    if (analysis.duration_minutes && analysis.duration_minutes > 0) setDurationMinutes(analysis.duration_minutes);
+    if (analysis.exam_title) setExamType(analysis.exam_title);
+    if (analysis.subject) setSubject(analysis.subject);
+    const detected: SectionConfig[] = analysis.sections
+      .filter((section) => section.name.trim())
+      .map((section, index) => ({
+        id: `model-${index}-${Date.now()}`,
+        name: section.name,
+        marksPerQuestion: section.marks_per_question && section.marks_per_question > 0 ? section.marks_per_question : index === 0 ? 2 : index === 1 ? 5 : 10,
+        questionCount: section.question_count && section.question_count > 0 ? section.question_count : 3,
+        difficulty: 'medium' as const,
+        questionType: 'analytical',
+        internalChoice: false,
+        units: [],
+        bloomLevels: ['L3', 'L4'] as BloomLevel[]
+      }));
+    if (detected.length) setSections(detected);
+  }
+
+  // ---------------------------------------------------------------------
+  // Generation — authenticated, duplicate-submission safe
+  // ---------------------------------------------------------------------
+  function handleGenerate() {
+    if (generating) return; // duplicate-submission prevention
+    // Step 2 is REQUIRED: never send a blueprint built from invented topics.
+    if (!syllabusConfirmed || syllabusUnits.length === 0) {
+      setGenerationError(
+        'Confirm your syllabus in Step 2 before generating - the paper structure is built from its units and topics.'
+      );
+      return;
+    }
+    setGenerating(true);
+    setGenerationError(null);
+    setGenerationStep('Preparing your question paper...');
+    const { blueprint } = buildBlueprint({
+      examType,
+      subject,
+      subjectCode,
+      selectedUnits,
+      totalMarks,
+      durationMinutes,
+      sections,
+      sourceMode: patternMode === 'model-paper' ? 'model_paper' : 'manual',
+      unitMaterialsPresent: !materialsSkipped && Object.keys(materials).length > 0,
+      syllabusUnits
+    });
+
+    queueGenerationJob(blueprint)
+      .then((job: GenerationJobSnapshot) => {
+        // Accepted - the background worker takes over; the poller below tracks
+        // checkpoints until completion.
+        setGenerationJobId(job.id);
+        setJobSnapshot(job);
+      })
+      .catch((error: unknown) => {
+        setGenerationError(messageOf(error));
+        setGenerating(false);
+      });
+  }
+
+  function handleResumeJob() {
+    if (!generationJobId || resumingJob) return;
+    setResumingJob(true);
+    resumeGenerationJob(generationJobId)
+      .then((job: GenerationJobSnapshot) => {
+        setJobSnapshot(job);
+        setGenerationError(null);
+      })
+      .catch((error: unknown) => setGenerationError(messageOf(error)))
+      .finally(() => setResumingJob(false));
+  }
+
+  // Poll the persistent job until it reaches a terminal state.
+  useEffect(() => {
+    if (!generationJobId || !generating) return;
+    let cancelled = false;
+
+    const tick = async () => {
+      try {
+        const job = await getGenerationJob(generationJobId);
+        if (cancelled) return;
+        setJobSnapshot(job);
+        if (job.status === 'completed' && job.paper_id) {
+          setGeneratedPaperId(job.paper_id);
+          setGenerationStep('Ready for review');
+          setGenerating(false);
+          setStep(7);
+        } else if (isTerminal(job.status)) {
+          setGenerationError(job.error_message || 'Generation failed.');
+          setGenerating(false);
+        }
+      } catch {
+        // Transient network errors are retried on the next tick.
+      }
+    };
+
+    const interval = setInterval(() => void tick(), POLL_INTERVAL_MS);
+    void tick();
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [generationJobId, generating]);
+
+  async function handleValidateBlueprint() {
+    setValidating(true);
+    setValidationResult(null);
+    const { blueprint } = buildBlueprint({
+      examType,
+      subject,
+      subjectCode,
+      selectedUnits,
+      totalMarks,
+      durationMinutes,
+      sections,
+      sourceMode: (patternMode ?? 'manual') === 'model-paper' ? 'model_paper' : 'manual',
+      unitMaterialsPresent: !materialsSkipped && Object.keys(materials).length > 0,
+      syllabusUnits
+    });
+    try {
+      const result = await validateBlueprint(blueprint);
+      setValidationResult({
+        feasibility: result.feasibility_issues ?? [],
+        issues: (result.validation?.issues ?? []).map((issue: { message?: string }) => issue.message ?? ''),
+        passed: Boolean(result.validation?.passed) && (result.feasibility_issues ?? []).length === 0
+      });
+    } catch (error) {
+      setValidationResult({ feasibility: [], issues: [messageOf(error)], passed: false });
+    } finally {
+      setValidating(false);
+    }
+  }
+
+  const stepCanNext: boolean = [step0Valid, step1Valid, true, step3Valid, step4Valid, step5Valid, true, false][step] ?? false;
+
+  function handleNextClick() {
+    if (step === 6) {
+      handleGenerate();
+      return;
+    }
+    setStep((current) => Math.min(current + 1, STEP_LABELS.length - 1));
+  }
+
+  function handleBackClick() {
     setStep((current) => Math.max(current - 1, 0));
   }
 
-  const selectedModeCopy = mode === 'model-paper' ? 'Model paper path' : 'Manual configuration path';
+  // ---------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------
+  if (authLoading) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.95),_rgba(226,232,240,0.75)_40%,_rgba(203,213,225,0.28)_72%,_rgba(15,23,42,0.05))]">
+        <Loader2 className="h-8 w-8 animate-spin text-slate-500" />
+      </main>
+    );
+  }
+
+  if (!user) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.95),_rgba(226,232,240,0.75)_40%,_rgba(203,213,225,0.28)_72%,_rgba(15,23,42,0.05))] px-6">
+        <div className="w-full max-w-md rounded-[2rem] border border-white/60 bg-white/80 p-8 text-center shadow-glass backdrop-blur-glass">
+          <h1 className="text-2xl font-semibold text-slate-950">Sign in to create a question paper</h1>
+          <p className="mt-3 text-sm leading-6 text-slate-600">Paper creation requires a faculty account so every generated paper is attributed correctly.</p>
+          <Link href="/login" className="mt-6 inline-flex rounded-full bg-slate-950 px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">
+            Sign in
+          </Link>
+        </div>
+      </main>
+    );
+  }
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.95),_rgba(226,232,240,0.75)_40%,_rgba(203,213,225,0.28)_72%,_rgba(15,23,42,0.05))] text-slate-900">
-      <section className="mx-auto flex max-w-7xl flex-col gap-6 px-6 py-8 lg:px-10">
-        <div className="glass-panel rounded-[2rem] border border-white/60 bg-white/55 p-6 shadow-glass backdrop-blur-glass">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div className="space-y-2">
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/65 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                <Sparkles className="h-3.5 w-3.5" />
-                Paper creation workspace
-              </div>
-              <h1 className="text-3xl font-semibold tracking-tight md:text-5xl">Create a governed exam paper blueprint.</h1>
-              <p className="max-w-3xl text-sm leading-6 text-slate-600 md:text-base">
-                Faculty control the sections, units, Bloom distribution, and 2-mark structure. The backend will validate the rules before generation and export.
-              </p>
-            </div>
-            <div className="rounded-3xl border border-slate-200/60 bg-slate-950 px-5 py-4 text-white shadow-lg">
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Current path</p>
-              <p className="mt-1 text-lg font-semibold">{selectedModeCopy}</p>
-            </div>
-          </div>
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.96),_rgba(226,232,240,0.75)_40%,_rgba(203,213,225,0.28)_72%,_rgba(15,23,42,0.05))] text-slate-900">
+      <section className="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-8 sm:px-6 lg:px-10">
+        <header className="space-y-1">
+          <p className="text-sm font-medium text-slate-500">Create Your Question Paper</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
+            Configure the syllabus, paper structure, question distribution, and evaluation criteria before generation.
+          </h1>
+        </header>
 
-          <div className="mt-6 grid gap-3 md:grid-cols-4 lg:grid-cols-8">
-            {stepLabels.map((label, index) => {
-              const active = index === step;
-              const completed = index < step;
-              return (
-                <button
-                  key={label}
-                  type="button"
-                  onClick={() => setStep(index)}
-                  className={`rounded-2xl border px-4 py-3 text-left transition ${
-                    active
-                      ? 'border-slate-900/15 bg-slate-950 text-white shadow-lg'
-                      : completed
-                        ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-                        : 'border-white/70 bg-white/55 text-slate-600 hover:bg-white/75'
-                  }`}
-                >
-                  <div className="text-xs font-medium uppercase tracking-[0.18em] opacity-70">Step {index + 1}</div>
-                  <div className="mt-1 text-sm font-semibold leading-5">{label}</div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        <Stepper items={stepItems} />
 
-        <div className="grid gap-6 lg:grid-cols-[1.3fr_0.7fr]">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
           <div className="space-y-6">
-            <div className="glass-panel rounded-[2rem] border border-white/60 bg-white/60 p-6 shadow-glass backdrop-blur-glass">
-              {step === 0 && (
-                <div className="space-y-6">
-                  <div className="flex items-center gap-3 text-slate-900">
-                    <Layers3 className="h-5 w-5 text-slate-600" />
-                    <h2 className="text-xl font-semibold">Subject & exam definition</h2>
-                  </div>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <Field label="Subject" value={form.watch('subject')} onChange={(value) => form.setValue('subject', value)} />
-                    <Field label="Subject code" value={form.watch('subjectCode')} onChange={(value) => form.setValue('subjectCode', value)} />
-                    <Field label="Exam type" value={form.watch('examType')} onChange={(value) => form.setValue('examType', value)} />
-                    <Field label="Academic year" value={form.watch('academicYear')} onChange={(value) => form.setValue('academicYear', value)} />
-                    <Field label="Total marks" type="number" value={String(form.watch('totalMarks'))} onChange={(value) => form.setValue('totalMarks', Number(value))} />
-                    <Field label="Duration (minutes)" type="number" value={String(form.watch('durationMinutes'))} onChange={(value) => form.setValue('durationMinutes', Number(value))} />
-                  </div>
-                  <ModeSwitcher value={mode} onChange={(value) => form.setValue('mode', value)} />
-                  <Field label="Selected units" hint="Comma-separated units selected for this exam" value={form.watch('selectedUnits')} onChange={(value) => form.setValue('selectedUnits', value)} />
+            {step === 0 ? (
+              <section className="glass-panel rounded-[2rem] border border-white/60 bg-white/70 p-6 shadow-glass backdrop-blur-glass">
+                <div className="flex items-center gap-2">
+                  <LayoutGrid className="h-5 w-5 text-slate-500" />
+                  <h2 className="text-lg font-semibold">Subject & Exam</h2>
                 </div>
-              )}
+                <p className="mt-1 text-sm text-slate-600">Set the paper identity. Every value comes from your input — nothing is pre-filled.</p>
 
-              {step === 1 && (
-                <div className="space-y-6">
-                  <div className="flex items-center gap-3 text-slate-900">
-                    <FileText className="h-5 w-5 text-slate-600" />
-                    <h2 className="text-xl font-semibold">Syllabus ingestion</h2>
-                  </div>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <Field label="Uploaded syllabus file" value={form.watch('syllabusFile') ?? ''} onChange={(value) => form.setValue('syllabusFile', value)} />
-                    <Field label="Syllabus preview status" value="Parsed and awaiting faculty confirmation" onChange={() => undefined} readOnly />
-                  </div>
-                  <InfoCard title="Extracted structure" body="Unit 1: foundational concepts, Unit 2: clustering methods, Unit 3: classification, Unit 4: pattern mining, Unit 5: evaluation." />
-                  <InfoCard title="Faculty action" body="Review detected units and topics before any generation step starts. Nothing is silently assumed." />
+                <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                  <TextInput label="Subject" value={subject} onChange={setSubject} placeholder="e.g. Data Structures" />
+                  <TextInput label="Subject code" value={subjectCode} onChange={setSubjectCode} placeholder="e.g. CS301" />
+                  <TextInput label="Exam type" value={examType} onChange={setExamType} placeholder="Enter the exam type" />
+                  <TextInput label="Academic year" value={academicYear} onChange={setAcademicYear} placeholder="e.g. 2026-27" />
+                  <NumberInput label="Total marks" value={totalMarks} onChange={setTotalMarks} min={1} />
+                  <NumberInput label="Duration (minutes)" value={durationMinutes} onChange={setDurationMinutes} min={1} />
                 </div>
-              )}
 
-              {step === 2 && (
-                <div className="space-y-6">
-                  <div className="flex items-center gap-3 text-slate-900">
-                    <CopyPlus className="h-5 w-5 text-slate-600" />
-                    <h2 className="text-xl font-semibold">Unit materials</h2>
+                <div className="mt-6">
+                  <p className="text-sm font-medium text-slate-700">Selected units</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {[1, 2, 3, 4, 5].map((unit) => {
+                      const selected = selectedUnits.includes(unit);
+                      return (
+                        <button
+                          key={unit}
+                          type="button"
+                          onClick={() =>
+                            setSelectedUnits((current) => (selected ? current.filter((value) => value !== unit) : [...current, unit]))
+                          }
+                          className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
+                            selected ? 'border-slate-950 bg-slate-950 text-white' : 'border-slate-300 bg-white text-slate-600 hover:border-slate-400'
+                          }`}
+                        >
+                          Unit {unit}
+                        </button>
+                      );
+                    })}
                   </div>
-                  <Field label="Attached unit materials" value={form.watch('unitMaterialSummary') ?? ''} onChange={(value) => form.setValue('unitMaterialSummary', value)} />
-                  <div className="grid gap-4 md:grid-cols-3">
-                    <InfoCard title="Primary source" body="Use unit materials first when available." />
-                    <InfoCard title="Boundary source" body="Syllabus still validates coverage and scope." />
-                    <InfoCard title="Fallback" body="If a unit has no material, syllabus content is used instead." />
+                  <p className="mt-2 text-xs text-slate-500">
+                    {selectedUnits.length ? `Covering units ${selectedUnits.join(', ')}` : 'No units selected yet.'}
+                  </p>
+                </div>
+              </section>
+            ) : null}
+
+            {step === 1 ? (
+              <div className="glass-panel rounded-[2rem] border border-white/60 bg-white/70 p-6 shadow-glass backdrop-blur-glass">
+                <div className="flex items-center gap-2">
+                  <FileCheck2 className="h-5 w-5 text-slate-500" />
+                  <h2 className="text-lg font-semibold">Syllabus</h2>
+                  <span className="rounded-full border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-600">Required</span>
+                </div>
+                <p className="mt-1 text-sm text-slate-600">
+                  Upload the official syllabus (PDF or DOCX). The parsed unit structure is shown for your confirmation.
+                </p>
+
+                <div className="mt-6">
+                  <UploadDrop
+                    accept=".pdf,.docx,.jpg,.jpeg,.png"
+                    title="Upload syllabus"
+                    hint="PDF, DOCX, JPG, JPEG or PNG — up to 50 MB. Scanned pages and photos are read automatically."
+                    status={syllabusStatus}
+                    fileName={syllabusFileName}
+                    busyLabel="Uploading and parsing syllabus…"
+                    error={syllabusError}
+                    onFile={handleSyllabusFile}
+                    onRemove={() => {
+                      setSyllabusFileName('');
+                      setSyllabusUnits([]);
+                      setEditableUnits(null);
+                      setSyllabusNotes([]);
+                      setSyllabusIssues([]);
+                      setSyllabusStatus('idle');
+                      setSyllabusConfirmed(false);
+                    }}
+                  />
+                </div>
+
+                {syllabusStatus === 'success' ? (
+                  <div className="mt-6 space-y-4">
+                    <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                      Parsed syllabus: <strong>{syllabusFileName || 'uploaded file'}</strong>
+                      <span className="ml-2 text-emerald-700">
+                        Review the proposed structure below — edit anything the reader mis-captured, then confirm.
+                      </span>
+                    </div>
+                    {editableUnits && editableUnits.length > 0 ? (
+                      <ul className="space-y-4" data-testid="syllabus-parsed">
+                        {editableUnits.map((unit, index) => (
+                          <li key={unit.unit_number} className="rounded-2xl border border-slate-200 bg-white/80 px-4 py-4">
+                            <div className="flex items-center gap-3">
+                              <span className="rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white">
+                                Unit {unit.unit_number}
+                              </span>
+                              <input
+                                type="text"
+                                value={unit.title ?? ''}
+                                onChange={(event) => updateEditableUnit(index, { title: event.target.value })}
+                                placeholder="Unit title"
+                                data-testid={`unit-title-${unit.unit_number}`}
+                                className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-400"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setEditableUnits((current) => (current ? removeUnit(current, index) : current))}
+                                data-testid={`remove-unit-${unit.unit_number}`}
+                                className="rounded-full border border-red-200 px-3 py-1 text-xs font-semibold text-red-700 hover:bg-red-50"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                            <textarea
+                              value={unit.topics.join('\n')}
+                              onChange={(event) => updateEditableTopics(index, event.target.value)}
+                              rows={Math.max(2, unit.topics.length + 1)}
+                              placeholder="One topic per line"
+                              data-testid={`unit-topics-${unit.unit_number}`}
+                              className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm leading-6 text-slate-800 outline-none focus:border-slate-400"
+                            />
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800" data-testid="syllabus-empty">
+                        No unit structure was detected in this file. Add the units manually below — nothing is invented for you.
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => setEditableUnits((current) => addUnit(current ?? []))}
+                      data-testid="add-unit"
+                      className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                    >
+                      + Add unit manually
+                    </button>
+
+                    {syllabusIssues.length ? (
+                      <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" data-testid="syllabus-issues">
+                        {syllabusIssues.map((issue) => (
+                          <p key={issue}>{issue}</p>
+                        ))}
+                      </div>
+                    ) : null}
+
+                    {syllabusNotes.length ? (
+                      <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                        {syllabusNotes.map((note) => (
+                          <p key={note}>{note}</p>
+                        ))}
+                      </div>
+                    ) : null}
+
+                    <button
+                      type="button"
+                      onClick={() => void handleConfirmSyllabus()}
+                      disabled={syllabusConfirming}
+                      className="inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-emerald-50 px-5 py-2.5 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100 disabled:opacity-60"
+                      data-testid="confirm-syllabus"
+                    >
+                      {syllabusConfirming ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                      {syllabusConfirmed ? 'Syllabus confirmed' : 'Confirm syllabus & continue'}
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+
+            {step === 2 ? (
+              <div className="glass-panel rounded-[2rem] border border-white/60 bg-white/70 p-6 shadow-glass backdrop-blur-glass">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <LayoutGrid className="h-5 w-5 text-slate-500" />
+                    <h2 className="text-lg font-semibold">Add Unit Materials</h2>
+                    <span className="rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800">Optional</span>
                   </div>
                 </div>
-              )}
+                <p className="mt-1 text-sm text-slate-600">
+                  Attach notes, slides, or reference material to the units you selected. Without materials, the syllabus content is used.
+                </p>
 
-              {step === 3 && (
-                <div className="space-y-6">
-                  <div className="flex items-center gap-3 text-slate-900">
-                    <FileText className="h-5 w-5 text-slate-600" />
-                    <h2 className="text-xl font-semibold">Model paper or manual rules</h2>
+                {materialsSkipped ? (
+                  <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                    Continuing without materials — the syllabus content will be used as the source for the paper.
+                    <button type="button" onClick={() => setMaterialsSkipped(false)} className="ml-2 font-semibold underline">
+                      Add materials instead
+                    </button>
                   </div>
-                  {mode === 'model-paper' ? (
-                    <>
-                      <Field label="Model paper file" value={form.watch('modelPaperName') ?? ''} onChange={(value) => form.setValue('modelPaperName', value)} />
-                      <InfoCard title="Blueprint extraction" body="Section order, marks, numbering, and choices are extracted as a candidate blueprint for faculty confirmation." />
-                    </>
+                ) : null}
+
+                <div className="mt-6 space-y-6">
+                  {selectedUnits.length === 0 ? (
+                    <p className="text-sm text-slate-500">Select units in Subject &amp; Exam first to attach materials per unit.</p>
                   ) : (
-                    <>
-                      <Field label="Section structure" value={form.watch('sections')} onChange={(value) => form.setValue('sections', value)} />
-                      <InfoCard title="Manual path" body="Faculty defines the complete paper structure without relying on a model paper." />
-                    </>
+                    selectedUnits.map((unit) => (
+                      <div key={unit} className="rounded-3xl border border-slate-200 bg-white/80 p-4">
+                        <p className="text-sm font-semibold text-slate-900">Unit {unit}</p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {materials[unit] ? `Attached: ${materials[unit]}` : 'No material attached yet.'}
+                        </p>
+                        <div className="mt-3">
+                          <UploadDrop
+                            accept=".pdf,.docx,.txt"
+                            title={`Add material for Unit ${unit}`}
+                            hint="PDF, DOCX, or TXT"
+                            status={materialStatus[unit] ?? 'idle'}
+                            busyLabel={`Extracting Unit ${unit} material…`}
+                            error={materialErrors[unit]}
+                            onFile={handleUnitMaterialForUnit(unit)}
+                            onRemove={
+                              materials[unit]
+                                ? () => {
+                                    setMaterials((current) => {
+                                      const next = { ...current };
+                                      delete next[unit];
+                                      return next;
+                                    });
+                                    setMaterialStatus((current) => ({ ...current, [unit]: 'idle' }));
+                                  }
+                                : undefined
+                            }
+                          />
+                        </div>
+                      </div>
+                    ))
                   )}
                 </div>
-              )}
 
-              {step === 4 && (
-                <div className="space-y-6">
-                  <div className="flex items-center gap-3 text-slate-900">
-                    <Layers3 className="h-5 w-5 text-slate-600" />
-                    <h2 className="text-xl font-semibold">Blueprint review</h2>
-                  </div>
-                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                    <Metric label="Marks total" value={`${summary.totalQuestionMarks}`} />
-                    <Metric label="Questions" value={`${summary.questionCount}`} />
-                    <Metric label="Units selected" value={`${summary.unitCount}`} />
-                    <Metric label="Mode" value={mode === 'model-paper' ? 'Model paper' : 'Manual'} />
-                  </div>
-                  <InfoCard title="Blueprint preview" body={sectionPresets[mode]} />
-                  <InfoCard title="Validation note" body="The backend will reject impossible totals, unit mismatches, or ambiguous question counts before generation starts." />
+                <div className="mt-6 flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setMaterialsSkipped(true)}
+                    className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-800 transition hover:bg-slate-100"
+                    data-testid="continue-without-materials"
+                  >
+                    Continue Without Materials
+                  </button>
                 </div>
-              )}
+              </div>
+            ) : null}
 
-              {step === 5 && (
-                <div className="space-y-6">
-                  <div className="flex items-center gap-3 text-slate-900">
-                    <Sparkles className="h-5 w-5 text-slate-600" />
-                    <h2 className="text-xl font-semibold">Bloom taxonomy and 2-mark configuration</h2>
+            {step === 3 ? (
+              <div className="glass-panel rounded-[2rem] border border-white/60 bg-white/70 p-6 shadow-glass backdrop-blur-glass">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-slate-500" />
+                  <h2 className="text-lg font-semibold">Paper Pattern</h2>
+                </div>
+                <p className="mt-1 text-sm text-slate-600">Choose how the paper structure is defined.</p>
+
+                <div className="mt-6 grid gap-3 md:grid-cols-2">
+                  <ModeCard
+                    title="Model Paper Pattern"
+                    description="Upload an official model paper so the section and mark pattern is extracted for you to confirm."
+                    active={patternMode === 'model-paper'}
+                    onSelect={() => setPatternMode('model-paper')}
+                  />
+                  <ModeCard
+                    title="Manual Paper Setup"
+                    description="Define the sections, marks, and question counts yourself in the Question Structure step."
+                    active={patternMode === 'manual'}
+                    onSelect={() => setPatternMode('manual')}
+                  />
+                </div>
+
+                {patternMode === 'model-paper' ? (
+                  <div className="mt-6 space-y-5">
+                    <UploadDrop
+                      accept=".pdf,.docx"
+                      title="Upload model paper"
+                      hint="PDF or DOCX"
+                      status={modelPaperStatus}
+                      fileName={modelPaperFileName}
+                      busyLabel="Analyzing model paper pattern…"
+                      error={modelPaperError}
+                      onFile={handleModelPaperFile}
+                      onRemove={() => {
+                        setModelPaperFileName('');
+                        setModelPaperAnalysis(null);
+                        setModelPaperStatus('idle');
+                        setModelPaperConfirmed(false);
+                      }}
+                    />
                   </div>
-                  <Field label="Bloom strategy" value={form.watch('bloomStrategy')} onChange={(value) => form.setValue('bloomStrategy', value)} />
-                  <Field label="2-mark question count" type="number" value={String(form.watch('twoMarkCount'))} onChange={(value) => form.setValue('twoMarkCount', Number(value))} />
-                  <div className="overflow-hidden rounded-[1.75rem] border border-white/70 bg-white/60">
-                    <div className="border-b border-slate-200/70 px-5 py-4 text-sm font-semibold text-slate-900">2-Mark Question Configuration</div>
-                    <div className="max-h-[360px] overflow-auto">
-                      <table className="min-w-full divide-y divide-slate-200/70 text-sm">
-                        <thead className="bg-white/80 text-left text-xs uppercase tracking-[0.16em] text-slate-500">
-                          <tr>
-                            <th className="px-5 py-3">#</th>
-                            <th className="px-5 py-3">Unit</th>
-                            <th className="px-5 py-3">Topic</th>
-                            <th className="px-5 py-3">Bloom</th>
-                            <th className="px-5 py-3">Style</th>
-                            <th className="px-5 py-3 text-right">Action</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-200/70 bg-white/40">
-                          {fields.map((field, index) => (
-                            <tr key={field.id}>
-                              <td className="px-5 py-3 font-medium text-slate-700">
-                                <input
-                                  className="w-16 rounded-xl border border-slate-200 bg-white px-3 py-2 outline-none ring-0 focus:border-slate-400"
-                                  type="number"
-                                  value={questions[index]?.questionNumber}
-                                  onChange={(event) => form.setValue(`questions.${index}.questionNumber`, Number(event.target.value))}
-                                />
-                              </td>
-                              <td className="px-5 py-3">
-                                <input
-                                  className="w-24 rounded-xl border border-slate-200 bg-white px-3 py-2 outline-none focus:border-slate-400"
-                                  value={questions[index]?.unit}
-                                  onChange={(event) => form.setValue(`questions.${index}.unit`, Number(event.target.value))}
-                                />
-                              </td>
-                              <td className="px-5 py-3">
-                                <input
-                                  className="w-full min-w-48 rounded-xl border border-slate-200 bg-white px-3 py-2 outline-none focus:border-slate-400"
-                                  value={questions[index]?.topic}
-                                  onChange={(event) => form.setValue(`questions.${index}.topic`, event.target.value)}
-                                />
-                              </td>
-                              <td className="px-5 py-3">
-                                <select
-                                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 outline-none focus:border-slate-400"
-                                  value={questions[index]?.bloomLevel}
-                                  onChange={(event) => form.setValue(`questions.${index}.bloomLevel`, event.target.value as WizardValues['questions'][number]['bloomLevel'])}
-                                >
-                                  {['L2', 'L3', 'L4', 'L5', 'L6'].map((level) => (
-                                    <option key={level} value={level}>
-                                      {level}
-                                    </option>
-                                  ))}
-                                </select>
-                              </td>
-                              <td className="px-5 py-3">
-                                <input
-                                  className="w-28 rounded-xl border border-slate-200 bg-white px-3 py-2 outline-none focus:border-slate-400"
-                                  value={questions[index]?.questionType}
-                                  onChange={(event) => form.setValue(`questions.${index}.questionType`, event.target.value)}
-                                />
-                              </td>
-                              <td className="px-5 py-3 text-right">
-                                <div className="inline-flex gap-2">
-                                  <button type="button" onClick={() => insert(index + 1, { ...questions[index], questionNumber: questions[index].questionNumber + 1 })} className="rounded-full border border-slate-200 bg-white px-3 py-2 text-slate-600 transition hover:bg-slate-100" aria-label="Duplicate row">
-                                    <CopyPlus className="h-4 w-4" />
-                                  </button>
-                                  <button type="button" onClick={() => remove(index)} className="rounded-full border border-rose-200 bg-rose-50 px-3 py-2 text-rose-600 transition hover:bg-rose-100" aria-label="Delete row">
-                                    <Trash2 className="h-4 w-4" />
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
+                ) : null}
+
+                {patternMode === 'model-paper' && modelPaperAnalysis ? (
+                  <div className="mt-6 space-y-4" data-testid="model-paper-analysis">
+                    <div className="rounded-2xl border border-slate-200 bg-white/90 px-4 py-4">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Extracted pattern</p>
+                      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                        <AnalysisRow label="Exam title" value={modelPaperAnalysis.exam_title || 'Not detected'} />
+                        <AnalysisRow label="Total marks" value={modelPaperAnalysis.total_marks ? `${modelPaperAnalysis.total_marks}` : 'Not detected'} />
+                        <AnalysisRow label="Duration" value={modelPaperAnalysis.duration_minutes ? `${modelPaperAnalysis.duration_minutes} min` : 'Not detected'} />
+                        <AnalysisRow label="Confidence" value={modelPaperAnalysis.confidence || 'unknown'} />
+                      </div>
+                    </div>
+                    {modelPaperAnalysis.sections.length ? (
+                      <div className="rounded-2xl border border-slate-200 bg-white/90 px-4 py-4">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Sections detected</p>
+                        <ul className="mt-2 divide-y divide-slate-100">
+                          {modelPaperAnalysis.sections.map((section, index) => (
+                            <li key={`${section.name}-${index}`} className="flex items-center justify-between gap-3 py-2 text-sm">
+                              <span className="font-medium text-slate-900">{section.name}</span>
+                              <span className="text-right text-xs text-slate-500">
+                                {section.question_count ? `${section.question_count} questions` : 'count unknown'} ·{' '}
+                                {section.marks_per_question ? `${section.marks_per_question} marks` : 'marks unknown'} · {section.confidence}
+                              </span>
+                            </li>
                           ))}
-                        </tbody>
-                      </table>
-                    </div>
-                    <div className="flex items-center justify-between border-t border-slate-200/70 px-5 py-4">
-                      <p className="text-sm text-slate-600">Rows can be duplicated, reordered, or deleted before generation.</p>
-                      <button
-                        type="button"
-                        className="rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
-                        onClick={() => append({ ...questions[questions.length - 1], questionNumber: questions.length + 1 })}
-                      >
-                        Add row
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {step === 6 && (
-                <div className="space-y-6">
-                  <div className="flex items-center gap-3 text-slate-900">
-                    <Sparkles className="h-5 w-5 text-slate-600" />
-                    <h2 className="text-xl font-semibold">Generation staging</h2>
-                  </div>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <InfoCard title="Deterministic Blueprint Control" body="The backend validates total marks, unit coverage, and Bloom taxonomy rules before invoking LLM generation." />
-                    <InfoCard title="Validation Engine Active" body="All generated questions will be checked for unit boundary adherence and model paper duplicate protection." />
-                  </div>
-
-                  {generationError && (
-                    <div className="rounded-2xl border border-rose-200 bg-rose-50/80 p-4 text-sm text-rose-700">
-                      <strong>Generation Error:</strong> {generationError}
-                    </div>
-                  )}
-
-                  <div className="rounded-[1.75rem] border border-white/70 bg-white/70 p-6 shadow-sm">
-                    <h3 className="text-lg font-semibold text-slate-950">Ready to Generate Question Paper</h3>
-                    <p className="mt-1 text-sm text-slate-600">
-                      Click below to submit the validated blueprint. Questions will be generated and persisted in PostgreSQL.
+                        </ul>
+                      </div>
+                    ) : null}
+                    <p className="text-sm text-slate-600">
+                      Review the extracted pattern, then confirm. Anything marked <em>inferred</em> or <em>unknown</em> can be corrected in the Question Structure step.
                     </p>
                     <button
                       type="button"
-                      disabled={generatePaper.isPending}
-                      onClick={handleGeneratePaper}
-                      className="mt-5 inline-flex items-center gap-2 rounded-full bg-slate-950 px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50"
+                      onClick={() => setModelPaperConfirmed(true)}
+                      className="inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-emerald-50 px-5 py-2.5 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100"
+                      data-testid="confirm-model-paper"
                     >
-                      {generatePaper.isPending ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Generating Questions...
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="h-4 w-4" />
-                          Generate Question Paper
-                        </>
-                      )}
+                      <CheckCircle2 className="h-4 w-4" /> Confirm model pattern
                     </button>
                   </div>
-                </div>
-              )}
+                ) : null}
 
-              {step === 7 && (
-                <div className="space-y-6">
-                  <div className="flex items-center gap-3 text-slate-900">
-                    <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-                    <h2 className="text-xl font-semibold">Review and export</h2>
+                {patternMode === 'manual' ? (
+                  <div className="mt-6 rounded-3xl border border-slate-200 bg-white/90 p-6" data-testid="manual-config">
+                    <p className="text-sm font-semibold text-slate-900">Manual Paper Setup</p>
+                    <p className="mt-2 text-sm leading-6 text-slate-600">
+                      You will define the sections, marks per question, question counts, units, and evaluation levels in the next two steps.
+                    </p>
+                    <p className="mt-1 text-sm text-slate-500">No model paper is required for this mode.</p>
                   </div>
-                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                    <InfoCard title="Structure" body="✓ Blueprint validation passed" />
-                    <InfoCard title="Quality" body="✓ Duplicate and scope checks complete" />
-                    <InfoCard title="Approval" body="Faculty must explicitly approve before PDF/DOCX export." />
-                  </div>
-                  <div className="flex flex-wrap gap-3">
-                    <Link
-                      href={generatedPaperId ? `/review?paper_id=${generatedPaperId}` : '/review'}
-                      className="inline-flex rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+                ) : null}
+              </div>
+            ) : null}
+
+            {step === 4 ? (
+              <div className="glass-panel rounded-[2rem] border border-white/60 bg-white/70 p-6 shadow-glass backdrop-blur-glass">
+                <div className="flex items-center gap-2">
+                  <LayoutGrid className="h-5 w-5 text-slate-500" />
+                  <h2 className="text-lg font-semibold">Question Structure</h2>
+                </div>
+                <p className="mt-1 text-sm text-slate-600">
+                  Build the paper sections. Question count × marks per question must add up to your target total.
+                </p>
+                <div className="mt-6">
+                  <SectionBuilder
+                    sections={sections}
+                    selectedUnits={selectedUnits}
+                    targetMarks={totalMarks}
+                    onChange={setSections}
+                    showBloom={false}
+                  />
+                </div>
+              </div>
+            ) : null}
+
+            {step === 5 ? (
+              <div className="glass-panel rounded-[2rem] border border-white/60 bg-white/70 p-6 shadow-glass backdrop-blur-glass">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-slate-500" />
+                  <h2 className="text-lg font-semibold">Blueprint &amp; Bloom</h2>
+                </div>
+                <p className="mt-1 text-sm text-slate-600">
+                  Assign evaluation levels to each section, review the distribution, and run the structure check before generation.
+                </p>
+
+                <div className="mt-6">
+                  <SectionBuilder
+                    sections={sections}
+                    selectedUnits={selectedUnits}
+                    targetMarks={totalMarks}
+                    onChange={setSections}
+                    showBloom
+                  />
+                </div>
+
+                <div className="mt-6 rounded-3xl border border-slate-200 bg-white/90 p-5">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Paper distribution</p>
+                  <dl className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    <DistributionStat label="Questions" value={`${questionCount}`} />
+                    <DistributionStat label="Section total" value={`${configuredTotal} marks`} />
+                    <DistributionStat label="Target total" value={`${totalMarks} marks`} />
+                    <DistributionStat label="Unallocated" value={`${marksRemaining} marks`} tone={marksRemaining === 0 ? 'ok' : 'warn'} />
+                  </dl>
+                </div>
+
+                <div className="mt-5 flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={handleValidateBlueprint}
+                    disabled={validating || !step4Valid}
+                    className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-800 transition hover:bg-slate-100 disabled:opacity-50"
+                    data-testid="check-blueprint"
+                  >
+                    {validating ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileCheck2 className="h-4 w-4" />}
+                    {validating ? 'Checking…' : 'Check Paper Rules'}
+                  </button>
+
+                  {validationResult ? (
+                    <div
+                      className={`flex-1 min-w-64 rounded-2xl border px-4 py-3 text-sm ${
+                        validationResult.passed
+                          ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                          : 'border-red-200 bg-red-50 text-red-800'
+                      }`}
+                      data-testid="validation-result"
                     >
-                      Open review workspace
-                    </Link>
-                    <Link href="/dashboard" className="inline-flex rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">
-                      Back to dashboard
-                    </Link>
-                  </div>
+                      <p className="font-semibold">{validationResult.passed ? 'Paper rules passed' : 'Paper rules need attention'}</p>
+                      {[...validationResult.feasibility, ...validationResult.issues].map((message, index) => (
+                        <p key={`${message}-${index}`} className="mt-1 text-xs">
+                          • {message}
+                        </p>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
-              )}
-            </div>
+              </div>
+            ) : null}
 
-            <div className="flex items-center justify-between rounded-[1.75rem] border border-white/60 bg-white/55 px-5 py-4 shadow-glass backdrop-blur-glass">
-              <button type="button" onClick={previousStep} disabled={step === 0} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:opacity-50">
-                <ArrowLeft className="h-4 w-4" />
-                Back
-              </button>
-              <div className="text-sm text-slate-500">Step {step + 1} of {stepLabels.length}</div>
-              <button type="button" onClick={nextStep} disabled={step === stepLabels.length - 1} className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50">
-                Next
-                <ArrowRight className="h-4 w-4" />
-              </button>
-            </div>
+{step === 6 ? (
+              <div className="glass-panel rounded-[2rem] border border-white/60 bg-white/70 p-6 shadow-glass backdrop-blur-glass">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-slate-500" />
+                  <h2 className="text-lg font-semibold">Ready to Generate Your Question Paper</h2>
+                </div>
+                <p className="mt-1 text-sm text-slate-600">
+                  Review the summary, then generate. The paper opens in the review workspace, where it must be approved before export.
+                </p>
+
+                <div className="mt-6 rounded-3xl border border-slate-200 bg-white/90 p-5">
+                  <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
+                    <DistributionStat label="Subject" value={subject || 'Not selected'} />
+                    <DistributionStat label="Exam" value={examType || 'Not selected'} />
+                    <DistributionStat label="Units" value={selectedUnits.length ? selectedUnits.join(', ') : 'Not selected'} />
+                    <DistributionStat label="Marks" value={`${configuredTotal} / ${totalMarks}`} tone={marksRemaining === 0 ? 'ok' : 'warn'} />
+                    <DistributionStat label="Sections" value={`${sections.length}`} />
+                    <DistributionStat label="Source" value={patternMode === 'model-paper' ? 'Model paper pattern' : patternMode === 'manual' ? 'Manual setup' : 'Not selected'} />
+                  </dl>
+                </div>
+
+                {generating && jobSnapshot ? (
+                  <GenerationProgressCard
+                    job={jobSnapshot}
+                    onResume={handleResumeJob}
+                    resuming={resumingJob}
+                  />
+                ) : null}
+                {generating && !jobSnapshot ? (
+                  <div className="mt-6 flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm text-slate-700">
+                    <Loader2 className="h-5 w-5 animate-spin text-slate-500" data-testid="generation-spinner" />
+                    <span>{generationStep || 'Preparing your question paper...'}</span>
+                  </div>
+                ) : null}
+
+                {generationError ? (
+                  <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" data-testid="generation-error">
+                    <p>{generationError}</p>
+                    <button
+                      type="button"
+                      onClick={handleGenerate}
+                      className="mt-3 inline-flex items-center gap-2 rounded-full border border-red-300 bg-white px-4 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100"
+                    >
+                      <RefreshCw className="h-3.5 w-3.5" /> Try again
+                    </button>
+                  </div>
+                ) : null}
+
+                <div className="mt-6">
+                  <button
+                    type="button"
+                    onClick={handleGenerate}
+                    disabled={!canGenerate || generating}
+                    className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50"
+                    data-testid="generate-paper"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    {generating ? 'Generating…' : 'Generate Question Paper'}
+                  </button>
+                  {!canGenerate ? (
+                    <p className="mt-2 text-xs text-slate-500">Complete the previous steps and balance the paper total before generating.</p>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+            {step === 7 ? (
+              <div className="glass-panel rounded-[2rem] border border-white/60 bg-white/70 p-6 shadow-glass backdrop-blur-glass">
+                {generatedPaperId ? (
+                  <div className="space-y-4" data-testid="generation-complete">
+                    <div className="flex items-center gap-2 text-emerald-700">
+                      <CheckCircle2 className="h-6 w-6" />
+                      <h2 className="text-lg font-semibold">Review Question Paper</h2>
+                    </div>
+                    <p className="text-sm text-slate-600">
+                      Your question paper draft is ready. Open the review workspace to edit, regenerate, lock, approve, and export it.
+                    </p>
+                    <div className="flex flex-wrap gap-3">
+                      <Link
+                        href={`/review?paper_id=${generatedPaperId}`}
+                        className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+                      >
+                        Open review workspace <ArrowRight className="h-4 w-4" />
+                      </Link>
+                      <Link
+                        href="/dashboard"
+                        className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                      >
+                        Back to dashboard
+                      </Link>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3" data-testid="generation-empty">
+                    <h2 className="text-lg font-semibold text-slate-900">Ready to Review</h2>
+                    <p className="text-sm text-slate-600">Generate the paper first, then return here to open the review workspace.</p>
+                    <button
+                      type="button"
+                      onClick={() => setStep(6)}
+                      className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-800 transition hover:bg-slate-100"
+                    >
+                      <ArrowLeft className="h-4 w-4" /> Back to Generate
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : null}
           </div>
 
-          <div className="space-y-6">
-            <div className="glass-panel rounded-[2rem] border border-white/60 bg-white/60 p-6 shadow-glass backdrop-blur-glass">
-              <p className="text-sm font-medium text-slate-500">Blueprint summary</p>
-              <div className="mt-4 space-y-3 text-sm text-slate-700">
-                <SummaryRow label="Subject" value={form.watch('subject')} />
-                <SummaryRow label="Exam" value={form.watch('examType')} />
-                <SummaryRow label="Units" value={form.watch('selectedUnits')} />
-                <SummaryRow label="Marks" value={`${form.watch('totalMarks')}`} />
-                <SummaryRow label="Duration" value={`${form.watch('durationMinutes')} min`} />
-                <SummaryRow label="Bloom" value={form.watch('bloomStrategy')} />
-              </div>
+          <aside className="space-y-6" data-testid="wizard-summary">
+            <div className="glass-panel rounded-[2rem] border border-white/60 bg-white/70 p-6 shadow-glass backdrop-blur-glass">
+              <h3 className="text-sm font-medium text-slate-500">Paper summary</h3>
+              <dl className="mt-4 space-y-3 text-sm">
+                <SummaryRow label="Subject" value={subject || 'Not selected'} />
+                <SummaryRow label="Exam" value={examType || 'Not selected'} />
+                <SummaryRow label="Units" value={selectedUnits.length ? selectedUnits.join(', ') : 'Not selected'} />
+                <SummaryRow label="Marks" value={totalMarks ? `${totalMarks}` : 'Not selected'} />
+                <SummaryRow label="Duration" value={durationMinutes ? `${durationMinutes} min` : 'Not selected'} />
+                <SummaryRow label="Paper total" value={`${configuredTotal} marks`} />
+                <SummaryRow label="Pattern" value={patternMode === 'model-paper' ? 'Model paper' : patternMode === 'manual' ? 'Manual' : 'Not selected'} />
+                <SummaryRow
+                  label="Materials"
+                  value={materialsSkipped ? 'Skipped' : Object.keys(materials).length ? `${Object.keys(materials).length} uploaded` : 'None yet'}
+                />
+              </dl>
             </div>
 
-            <div className="glass-panel rounded-[2rem] border border-white/60 bg-slate-950 p-6 text-white shadow-glass backdrop-blur-glass">
-              <p className="text-sm font-medium text-slate-400">Workflow integrity</p>
-              <div className="mt-4 space-y-3 text-sm text-slate-200">
-                <p>• Model paper never becomes the factual subject source.</p>
-                <p>• Faculty review sits between extraction and generation.</p>
-                <p>• Validation blocks invalid papers before export.</p>
-                <p>• Locked questions cannot be changed by regeneration.</p>
+            <div className="glass-panel rounded-[2rem] border border-white/60 bg-white/70 p-6 shadow-glass backdrop-blur-glass">
+              <h3 className="text-sm font-medium text-slate-500">Quality checks</h3>
+              <div className="mt-4 space-y-3 text-sm">
+                <CheckRow label="Syllabus confirmed" ok={syllabusConfirmed} />
+                <CheckRow label="Marks structure balanced" ok={step4Valid} />
+                <CheckRow label="Evaluation levels set" ok={step5Valid} />
+                <CheckRow label="Rules check passed" ok={Boolean(validationResult?.passed)} />
               </div>
             </div>
+          </aside>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-[1.75rem] border border-white/60 bg-white/55 px-5 py-4 shadow-glass backdrop-blur-glass">
+          <button
+            type="button"
+            onClick={handleBackClick}
+            disabled={step === 0}
+            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:opacity-40"
+          >
+            <ArrowLeft className="h-4 w-4" /> Back
+          </button>
+          <div className="text-sm text-slate-500">
+            Step {step + 1} of {STEP_LABELS.length}
+            {!stepCanNext && step !== 7 ? (
+              <span className="ml-2 text-xs text-slate-400">Complete the required fields to continue</span>
+            ) : null}
           </div>
+          {step < 7 ? (
+            <button
+              type="button"
+              onClick={handleNextClick}
+              disabled={!stepCanNext || (step === 6 && generating)}
+              className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-5 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-40"
+              data-testid="wizard-next"
+            >
+              {step === 6 ? 'Generate Question Paper' : 'Next'}
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          ) : null}
         </div>
       </section>
     </main>
   );
 }
 
-function Field({
-  label,
-  value,
-  onChange,
-  type = 'text',
-  hint,
-  readOnly = false
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  type?: string;
-  hint?: string;
-  readOnly?: boolean;
-}) {
+function TextInput({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (value: string) => void; placeholder?: string }) {
   return (
-    <label className="space-y-2">
-      <span className="text-sm font-medium text-slate-700">{label}</span>
+    <label className="block space-y-1.5">
+      <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">{label}</span>
       <input
-        readOnly={readOnly}
-        type={type}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="w-full rounded-2xl border border-slate-200/80 bg-white/75 px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:bg-white"
+        placeholder={placeholder}
+        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
       />
-      {hint ? <span className="text-xs text-slate-500">{hint}</span> : null}
     </label>
   );
 }
 
-function ModeSwitcher({ value, onChange }: { value: 'model-paper' | 'manual'; onChange: (value: 'model-paper' | 'manual') => void }) {
+function NumberInput({ label, value, onChange, min }: { label: string; value: number; onChange: (value: number) => void; min?: number }) {
   return (
-    <div className="grid gap-3 md:grid-cols-2">
-      <button
-        type="button"
-        onClick={() => onChange('model-paper')}
-        className={`rounded-[1.5rem] border px-4 py-4 text-left transition ${value === 'model-paper' ? 'border-slate-950 bg-slate-950 text-white shadow-lg' : 'border-slate-200 bg-white/70 text-slate-700 hover:bg-white'}`}
-      >
-        <div className="text-xs uppercase tracking-[0.18em] text-current/70">Mode A</div>
-        <div className="mt-1 font-semibold">Model paper available</div>
-        <div className="mt-2 text-sm opacity-80">Analyze structure, then confirm or correct the extracted blueprint.</div>
-      </button>
-      <button
-        type="button"
-        onClick={() => onChange('manual')}
-        className={`rounded-[1.5rem] border px-4 py-4 text-left transition ${value === 'manual' ? 'border-slate-950 bg-slate-950 text-white shadow-lg' : 'border-slate-200 bg-white/70 text-slate-700 hover:bg-white'}`}
-      >
-        <div className="text-xs uppercase tracking-[0.18em] text-current/70">Mode B</div>
-        <div className="mt-1 font-semibold">No model paper</div>
-        <div className="mt-2 text-sm opacity-80">Faculty define the entire paper blueprint manually in the wizard.</div>
-      </button>
+    <label className="block space-y-1.5">
+      <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">{label}</span>
+      <input
+        type="number"
+        min={min}
+        value={Number.isFinite(value) ? value : ''}
+        onChange={(event) => {
+          const parsed = parseInt(event.target.value, 10);
+          onChange(Number.isFinite(parsed) ? Math.max(min ?? 0, parsed) : 0);
+        }}
+        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+      />
+    </label>
+  );
+}
+
+function ModeCard({ title, description, active, onSelect }: { title: string; description: string; active: boolean; onSelect: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={`rounded-3xl border px-4 py-4 text-left transition ${
+        active ? 'border-slate-950 bg-slate-950 text-white shadow-lg' : 'border-slate-200 bg-white/80 text-slate-700 hover:bg-white'
+      }`}
+    >
+      <p className="font-semibold">{title}</p>
+      <p className={`mt-1.5 text-sm leading-5 ${active ? 'text-slate-300' : 'text-slate-500'}`}>{description}</p>
+    </button>
+  );
+}
+
+function AnalysisRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-2 rounded-xl border border-slate-100 bg-white px-3 py-2 text-sm">
+      <span className="text-xs font-medium uppercase tracking-wider text-slate-500">{label}</span>
+      <span className="font-semibold text-slate-900">{value}</span>
     </div>
   );
 }
 
-function InfoCard({ title, body }: { title: string; body: string }) {
+function DistributionStat({ label, value, tone }: { label: string; value: string; tone?: 'ok' | 'warn' }) {
+  const toneClass = tone === 'ok' ? 'text-emerald-700' : tone === 'warn' ? 'text-amber-700' : 'text-slate-900';
   return (
-    <div className="rounded-[1.5rem] border border-white/70 bg-white/70 p-4">
-      <p className="text-sm font-semibold text-slate-900">{title}</p>
-      <p className="mt-2 text-sm leading-6 text-slate-600">{body}</p>
-    </div>
-  );
-}
-
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-[1.5rem] border border-white/70 bg-white/70 p-4">
-      <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{label}</p>
-      <p className="mt-2 text-2xl font-semibold text-slate-950">{value}</p>
+    <div>
+      <dt className="text-xs uppercase tracking-wider text-slate-500">{label}</dt>
+      <dd className={`mt-0.5 text-sm font-semibold ${toneClass}`}>{value}</dd>
     </div>
   );
 }
 
 function SummaryRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between gap-4 border-b border-white/60 pb-2 last:border-b-0 last:pb-0">
+    <div className="flex items-center justify-between gap-3 border-b border-white/60 pb-2 text-sm last:border-b-0 last:pb-0">
       <span className="text-slate-500">{label}</span>
       <span className="font-medium text-slate-900">{value}</span>
     </div>
   );
+}
+
+function CheckRow({ label, ok }: { label: string; ok: boolean }) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <span className="text-slate-600">{label}</span>
+      {ok ? (
+        <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700">
+          <CheckCircle2 className="h-3.5 w-3.5" /> Passed
+        </span>
+      ) : (
+        <span className="text-xs font-semibold text-slate-400">Pending</span>
+      )}
+    </div>
+  );
+}
+
+function messageOf(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'string') return error;
+  return 'Something went wrong. Please try again.';
 }

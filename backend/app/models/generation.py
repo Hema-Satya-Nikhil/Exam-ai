@@ -24,6 +24,19 @@ class GenerationJob(Base):
     finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     error_message: Mapped[Optional[str]] = mapped_column(Text)
 
+    # Async-job ownership / progress / lifecycle (added for the persistent
+    # GenerationJob workflow; all nullable so pre-existing rows stay valid).
+    created_by: Mapped[Optional[str]] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    created_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+    total_questions: Mapped[Optional[int]] = mapped_column(Integer)
+    paper_id: Mapped[Optional[str]] = mapped_column(ForeignKey("generated_papers.id", ondelete="SET NULL"))
+    idempotency_key: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+
     questions: Mapped[list[GeneratedQuestion]] = relationship(back_populates="job", cascade="all, delete-orphan")
 
 

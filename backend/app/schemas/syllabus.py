@@ -19,6 +19,27 @@ class SyllabusParseResult(BaseModel):
     units: list[UnitRead] = Field(default_factory=list)
     confidence: ConfidenceLevel = "inferred"
     notes: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+    ocr_used: bool = False
+
+
+class SyllabusConfirmUnit(BaseModel):
+    unit_number: int
+    title: Optional[str] = None
+    topics: list[str] = Field(default_factory=list)
+
+
+class SyllabusConfirmRequest(BaseModel):
+    subject_id: str
+    source_file_name: str = ""
+    units: list[SyllabusConfirmUnit] = Field(default_factory=list)
+
+
+class SyllabusConfirmResult(BaseModel):
+    syllabus_version_id: str
+    subject_id: str
+    source_file_name: str
+    units: list[SyllabusConfirmUnit] = Field(default_factory=list)
 
 
 class UnitMaterialUploadRequest(BaseModel):

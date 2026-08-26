@@ -7,7 +7,8 @@ from app.schemas.model_paper import ModelPaperAnalysisResult, ModelPaperFinding,
 
 class ModelPaperService:
     title_pattern = re.compile(r"^(.*question paper.*)$", re.IGNORECASE | re.MULTILINE)
-    marks_pattern = re.compile(r"(\d+)\s*marks?", re.IGNORECASE)
+    # "80 marks" (digits before) OR "Maximum Marks: 80" / "Marks - 80" / "Marks = 80"
+    marks_pattern = re.compile(r"(\d+)\s*marks?|marks?\s*(?:[:=~-]\s*)?(\d+)", re.IGNORECASE)
     duration_pattern = re.compile(r"duration\s*[:\-]?\s*(\d+)\s*minutes?", re.IGNORECASE)
     section_pattern = re.compile(r"^\s*(part\s+[a-z0-9]+|section\s+[a-z0-9]+)\s*$", re.IGNORECASE | re.MULTILINE)
     question_pattern = re.compile(r"(?:^|\n)\s*(\d+)[\).]\s*(.+)$", re.IGNORECASE | re.MULTILINE)
@@ -20,7 +21,7 @@ class ModelPaperService:
         if title_match:
             findings.append(ModelPaperFinding(field="exam_title", value=title_match.group(1).strip(), confidence="inferred"))
 
-        marks = [int(match.group(1)) for match in self.marks_pattern.finditer(extracted_text)]
+        marks = [int(m.group(1) or m.group(2)) for m in self.marks_pattern.finditer(extracted_text)]
         total_marks = sum(marks) if marks else None
         if total_marks is not None:
             findings.append(ModelPaperFinding(field="total_marks", value=str(total_marks), confidence="inferred"))

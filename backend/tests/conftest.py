@@ -1,5 +1,10 @@
+import os
 import sys
 from pathlib import Path
+
+# Test environment marker must be set before any app import (see app/tests).
+os.environ.setdefault("APP_ENV", "TEST")
+
 
 def pytest_sessionstart(session):
     # Add the root directory to sys.path

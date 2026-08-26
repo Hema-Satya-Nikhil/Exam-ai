@@ -50,11 +50,74 @@ class PaperWorkflowService:
         return paper
 
     def get_draft(self, paper_id: str) -> PaperDraftRead | None:
+        draft = self.store.papers.get(paper_id)
+        if draft is not None:
+            return draft
+
+        fallback = self._generation_store_draft(paper_id)
+        if fallback is not None:
+            self.store.papers[paper_id] = fallback
+            return fallback
+
+        # Restart survival: background-completed jobs persist Paper +
+        # PaperVersion rows in PostgreSQL. Rebuild the draft from those rows
+        # when no in-memory copy exists (e.g. after a backend restart) so the
+        # Review workflow keeps working. Safe here because this sync path runs
+        # in a worker thread; the async variant uses get_draft_async.
+        import asyncio as _asyncio
+
+        try:
+            _asyncio.get_running_loop()
+        except RuntimeError:
+            pass
+        else:
+            return None
+
+        async def _rebuild() -> None:
+            from app.db.session import async_session_maker as _maker
+
+            repo = PaperWorkflowRepository(_maker())
+            db_paper = await repo.get_paper(paper_id)
+            if db_paper is None:
+                return
+            latest = await repo.get_latest_version(paper_id)
+            paper_json = latest.paper_json if latest else {}
+            rebuilt = PaperDraftRead(
+                id=db_paper.id,
+                title=db_paper.title,
+                status=db_paper.status,
+                locked_question_numbers=paper_json.get("locked_question_numbers", []),
+                paper_json=paper_json,
+                validation_passed=paper_json.get("validation", {}).get("passed", False),
+            )
+            self.store.papers[rebuilt.id] = rebuilt
+
+        _asyncio.run(_rebuild())
         return self.store.papers.get(paper_id)
+
+    def _generation_store_draft(self, paper_id: str) -> PaperDraftRead | None:
+        """Fall back to the in-process GenerationService draft store.
+
+        The generation flow stores drafts in its own PaperWorkflowService
+        instance (see ``app.api.routes.generation``), while the paper review/export
+        routes use a separate instance. Without this fallback a freshly generated
+        draft (stored in the generation service) is invisible to GET /drafts/{id},
+        PATCH question, lock, regenerate, approve and export -> 404 / "not approved".
+        """
+        try:
+            from app.api.routes.generation import generation_service
+            return generation_service.paper_workflow.store.papers.get(paper_id)
+        except Exception:
+            return None
 
     async def get_draft_async(self, paper_id: str) -> PaperDraftRead | None:
         if paper_id in self.store.papers:
             return self.store.papers[paper_id]
+
+        fallback = self._generation_store_draft(paper_id)
+        if fallback is not None:
+            self.store.papers[paper_id] = fallback
+            return fallback
 
         if self.repo:
             db_paper = await self.repo.get_paper(paper_id)
@@ -129,6 +192,28 @@ class PaperWorkflowService:
             await self.repo.update_paper_version_json(paper_id, locked.paper_json)
             await self.repo.log_action("lock_question", "paper", paper_id, {"question_number": payload.question_number})
         return locked
+
+    def unlock_question(self, paper_id: str, payload: PaperLockRequest) -> PaperDraftRead | None:
+        paper = self.get_draft(paper_id)
+        if paper is None:
+            return None
+        if payload.question_number in paper.locked_question_numbers:
+            paper.locked_question_numbers.remove(payload.question_number)
+        paper.paper_json["locked_question_numbers"] = paper.locked_question_numbers
+        for question in paper.paper_json.get("questions", []):
+            if int(question.get("question_number", -1)) == payload.question_number:
+                question["locked"] = False
+        return paper
+
+    async def unlock_question_async(self, paper_id: str, payload: PaperLockRequest) -> PaperDraftRead | None:
+        paper = await self.get_draft_async(paper_id)
+        if paper is None:
+            return None
+        unlocked = self.unlock_question(paper_id, payload)
+        if unlocked and self.repo:
+            await self.repo.update_paper_version_json(paper_id, unlocked.paper_json)
+            await self.repo.log_action("unlock_question", "paper", paper_id, {"question_number": payload.question_number})
+        return unlocked
 
     def approve_paper(
         self, paper_id: str, approved_by: str, comments: str | None = None

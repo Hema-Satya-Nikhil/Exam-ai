@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies.auth import get_current_user, get_db
-from app.schemas.auth import LoginRequest, RefreshRequest, TokenPair, UserContext
+from app.schemas.auth import LoginRequest, RefreshRequest, RegisterRequest, RegisterResponse, TokenPair, UserContext
 from app.services.auth_service import AuthService
 
 router = APIRouter()
@@ -34,6 +34,36 @@ async def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
     return await auth_service.issue_token_pair(db, user)
+
+
+@router.post(
+    "/register",
+    response_model=RegisterResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Faculty self-registration (pending admin approval)",
+)
+async def register(
+    request: RegisterRequest,
+    db: AsyncSession = Depends(get_db),
+) -> RegisterResponse:
+    """Register a new faculty account.
+
+    The account is created **inactive** (`is_active=False`) and must be
+    approved by an administrator before the user can sign in. Registration
+    is intentionally restricted to the `faculty` role — administrators are
+    bootstrapped only via `seed_admin`, so self-promotion is impossible.
+    """
+    existing = await auth_service.get_user_by_email(db, request.email)
+    if existing is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An account with this email already exists.",
+        )
+    user = await auth_service.register_faculty(
+        db, request.email, request.full_name, request.password, role=request.role
+    )
+    await db.commit()
+    return RegisterResponse(user_id=user.id, email=user.email)
 
 
 @router.post(

@@ -15,11 +15,22 @@ class GenerationJobCreate(BaseModel):
 
 class GenerationJobRead(BaseModel):
     id: str
-    status: Literal["queued", "running", "failed", "completed"]
+    status: Literal["queued", "running", "completed", "failed", "cancelled"]
     current_step: Optional[str] = None
     progress_percent: int = 0
     retry_count: int = 0
     error_message: Optional[str] = None
+    # Async persistent-job surface (all optional for backward compatibility
+    # with the legacy in-memory job representation).
+    paper_id: Optional[str] = None
+    created_by: Optional[str] = None
+    total_questions: Optional[int] = None
+    completed_questions: int = 0
+    current_question: Optional[int] = None
+    created_at: Optional[str] = None
+    started_at: Optional[str] = None
+    finished_at: Optional[str] = None
+    updated_at: Optional[str] = None
 
 
 class ValidationIssue(BaseModel):
