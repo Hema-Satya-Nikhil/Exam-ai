@@ -1,0 +1,14 @@
+[tool.setuptools]
+package-dir = "src"
+
+[tool.setuptools.package]
+name = "exam_craft_ai"
+
+include = [
+    "backend/*",
+    "backend/app/*",
+    "backend/db/*",
+    "backend/migrations/*",
+    "backend/services/*",
+    "backend/tests/*"
+]
