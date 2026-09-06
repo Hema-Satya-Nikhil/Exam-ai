@@ -186,7 +186,7 @@ Use origins only. Do not include `/login`, `/api`, or another path. Do not use
 ```env
 NVIDIA_API_KEY=<nvidia-api-key>
 NVIDIA_BASE_URL=https://integrate.api.nvidia.com/v1
-NVIDIA_MODEL=nvidia/nemotron-3.5-lightning-30b-a3b
+NVIDIA_MODEL=nvidia/nemotron-3-nano-30b-a3b
 LLM_TIMEOUT=90
 LLM_MAX_RETRIES=3
 LLM_STUB=false
@@ -194,7 +194,21 @@ LLM_STUB=false
 
 Never expose `NVIDIA_API_KEY` to Vercel or browser code.
 
-### Brevo email
+### Email provider (password-reset OTP)
+
+The email provider is selected with `EMAIL_PROVIDER`. The backend default is
+`resend`; Brevo is also implemented and can be selected explicitly.
+
+Resend (default):
+
+```env
+EMAIL_PROVIDER=resend
+RESEND_API_KEY=<resend-api-key>
+RESEND_FROM_EMAIL=onboarding@resend.dev
+RESEND_FROM_NAME=ExamCraft AI
+```
+
+Brevo (alternative):
 
 ```env
 EMAIL_PROVIDER=brevo
@@ -203,9 +217,11 @@ BREVO_FROM_EMAIL=<verified-brevo-sender>
 BREVO_FROM_NAME=ExamCraft AI
 ```
 
+With Resend, `RESEND_FROM_EMAIL` must be a sender verified in the Resend
+account (`onboarding@resend.dev` is for testing only). With Brevo,
 `BREVO_FROM_EMAIL` must be a sender verified or permitted by the Brevo
-account. Do not invent a sender address. Never expose `BREVO_API_KEY` to the
-frontend.
+account. Do not invent a sender address. Never expose `RESEND_API_KEY` or
+`BREVO_API_KEY` to the frontend.
 
 ### Password reset and uploads
 

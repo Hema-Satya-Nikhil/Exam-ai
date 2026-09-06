@@ -1,4 +1,4 @@
-# AI-Based Question Paper Generation System Using Bloom's Taxonomy
+# ExamCraft AI
 
 [![CI](https://github.com/Hema-Satya-Nikhil/Exam-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/Hema-Satya-Nikhil/Exam-ai/actions/workflows/ci.yml)
 
@@ -19,12 +19,17 @@ A production-oriented monorepo for generating academic question papers with dete
 - `docs/` - architecture and workflow documentation
 - `docker-compose.yml` - local stack with Postgres, backend, and frontend
 
-## Setup
+## Local Development
 
-1. Copy `.env.example` to `.env` and fill in secrets.
-2. Paste the NVIDIA API key into `NVIDIA_API_KEY` in the backend environment file only.
-3. Start PostgreSQL, backend, and frontend with Docker.
-4. Run migrations before generating papers.
+1. Copy `.env.example` to `.env` (root) and fill in secrets; copy
+   `frontend/.env.example` to `frontend/.env.local` for the frontend API URL.
+2. Backend (canonical environment is the repository-root `.venv`):
+   `uvicorn app.main:app --host 127.0.0.1 --port 8000` from `backend/`.
+3. Frontend: `npm run dev` from `frontend/` (http://localhost:3000).
+4. Run migrations before generating papers: `alembic upgrade head` from `backend/`.
+
+Alternatively, start PostgreSQL, backend, and frontend with Docker via
+`docker-compose.yml`.
 
 ## Browser E2E (frontend)
 
@@ -46,20 +51,39 @@ Without `E2E_PAPER_ID` the paper-dependent specs skip with a clear message, so
 
 ## Environment Variables
 
-- `DATABASE_URL`
-- `MONGODB_URI`
-- `MONGODB_DATABASE`
-- `NVIDIA_API_KEY`
-- `NVIDIA_BASE_URL`
-- `NVIDIA_MODEL`
-- `APP_ENV`
-- `SECRET_KEY`
-- `MAX_UPLOAD_SIZE`
-- `LLM_TIMEOUT`
-- `LLM_MAX_RETRIES`
+Backend (root `.env`, loaded by `backend/app/core/config.py`):
+
+- `DATABASE_URL`, `MONGODB_URI`, `MONGODB_DATABASE`
+- `NVIDIA_API_KEY`, `NVIDIA_BASE_URL`, `NVIDIA_MODEL`
+- `SECRET_KEY`, `APP_ENV`, `MAX_UPLOAD_SIZE`
+- `LLM_TIMEOUT`, `LLM_MAX_RETRIES`, `GENERATION_CONCURRENCY`
+- `ADMIN_EMAIL`, `ADMIN_PASSWORD` (bootstrap admin seed only)
+- `CORS_ORIGINS` (additional allowed frontend origins)
+- `EMAIL_PROVIDER` (`resend` default | `brevo`) plus the matching
+  `RESEND_*` or `BREVO_*` credentials
+- `OTP_EXPIRE_MINUTES`, `OTP_MAX_ATTEMPTS`, `OTP_RESEND_COOLDOWN_SECONDS`,
+  `RESET_TOKEN_EXPIRE_MINUTES`
+
+Frontend (`frontend/.env.local`):
+
+- `NEXT_PUBLIC_API_BASE_URL` — required for production builds
 
 MongoDB is reserved for future document/session storage and can be pointed at a local or managed instance through the backend environment.
-The NVIDIA API key must stay in the backend environment. Do not add it to the frontend.
+The NVIDIA API key and email provider credentials must stay in the backend environment. Do not add them to the frontend.
+
+## Testing
+
+- Backend: `pytest -q` from `backend/`
+- Frontend: `npm test -- --ci --runInBand`, `npx tsc --noEmit`, `npx eslint .`,
+  `npm run build` from `frontend/`
+- Browser E2E: see the Playwright section below; CI runs all of the above on
+  every push/PR to `main` (`.github/workflows/ci.yml`)
+
+## Production Deployment
+
+See [`docs/deployment.md`](docs/deployment.md) for the full Vercel (frontend)
++ Render (backend) + managed PostgreSQL/MongoDB guide, including environment
+variables, migrations, and the pre-deployment checklist.
 
 ## Security Notes
 
@@ -68,7 +92,17 @@ The NVIDIA API key must stay in the backend environment. Do not add it to the fr
 - Validation happens in the backend before any paper can be approved or exported.
 - Audit logs track major actions without secrets.
 
-## Current Status
+## Product Features
 
-The repository is scaffolded with the core project architecture, schema layer, and app shells. Next steps are to finish backend route wiring, generation workflows, validation logic, export pipelines, and tests.
-The backend now also includes a thin repository layer for future persistence work and a reserved MongoDB connection path for non-relational storage.
+- Two-part institutional exams (Part A short answer + Part B main paper with
+  explicit OR/choice groups) with atomic, checkpointed, resumable generation
+- Syllabus ingestion from PDF/DOCX/images (OCR) with atomic topic extraction
+  and faculty confirmation
+- Deterministic blueprint + question validation (marks, units, Bloom,
+  duplicates, syllabus scope) enforced by the backend
+- Faculty review workspace: edit, regenerate with instructions, lock/unlock,
+  final validation, and validation-gated PDF/DOCX export with audit logging
+- Admin People & Access: faculty approval, admin-access requests, protected
+  Main Admin, and an audit trail
+- Secure forgot-password flow with hashed, expiring, attempt-limited OTPs and
+  single-use reset authorization
