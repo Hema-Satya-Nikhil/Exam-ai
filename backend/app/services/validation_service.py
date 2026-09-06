@@ -118,19 +118,20 @@ class ValidationService:
     def detect_duplicate_questions(self, questions: list[QuestionRequirement]) -> ValidationSummary:
         """Flag redundant topic reuse inside the blueprint.
 
-        Rules enforced here (per section; reuse across *different* sections is
-        normal exam practice — a 2-mark recall and a 10-mark analysis may share
-        a topic):
+        Duplicate scope is the (unit, topic) identity, never the topic alone:
+        the same topic name may legitimately appear in different syllabus units
+        (e.g. "Process Scheduling" in both Unit 1 and Unit 2) and must NOT be
+        treated as a duplicate across those units. Rules enforced here (per
+        section; reuse across *different* sections is normal exam practice):
 
-        * same topic drawn from DIFFERENT units -> error. Claiming the same
-          topic twice while attributing it to two units double-counts coverage;
-        * same topic on the same unit while that unit demonstrably offers other
+        * same (unit, topic) repeated while that unit demonstrably offers other
           topics elsewhere in the paper -> error. The variety existed and was
           not used;
-        * same topic on the same unit because the confirmed syllabus lists no
-          further topics for it -> warning only ("topic_pool_exhausted"). The
-          faculty should enrich the syllabus, but a legitimate thin-syllabus
-          paper must remain generatable.
+        * same (unit, topic) repeated because the confirmed syllabus lists no
+          further topics for that unit -> warning only ("topic_pool_exhausted").
+          The faculty should enrich the syllabus, but a legitimate thin-syllabus
+          paper must remain generatable;
+        * same topic text on a DIFFERENT unit -> valid, never flagged.
         """
         issues: list[ValidationIssue] = []
 
@@ -144,18 +145,22 @@ class ValidationService:
             by_section.setdefault(question.section, []).append(question)
 
         for section_name, section_questions in by_section.items():
-            normalized_first: dict[str, QuestionRequirement] = {}
-            signature_first: dict[tuple[str, ...], QuestionRequirement] = {}
+            # Keyed by (unit, topic) so a topic name shared across different
+            # units never collides as a duplicate.
+            normalized_first: dict[tuple[int, str], QuestionRequirement] = {}
+            signature_first: dict[tuple[int, tuple[str, ...]], QuestionRequirement] = {}
 
             for question in section_questions:
                 normalized = _normalize_text(question.topic)
                 signature = _token_signature(question.topic)
+                unit = question.unit
 
-                original = normalized_first.get(normalized) or (
-                    signature_first.get(signature) if signature else None
-                )
+                original = normalized_first.get((unit, normalized))
+                if original is None and signature:
+                    original = signature_first.get((unit, signature))
+
                 if original is not None:
-                    if original.unit != question.unit:
+                    if len(topics_per_unit.get(unit, set())) >= 2:
                         issues.append(
                             ValidationIssue(
                                 code="exact_duplicate_topic"
@@ -164,22 +169,7 @@ class ValidationService:
                                 message=(
                                     f"Question {question.question_number} in section "
                                     f"{section_name} repeats topic '{question.topic.strip()}' "
-                                    f"already used for unit {original.unit} — the same topic "
-                                    "cannot cover two units."
-                                ),
-                                path=f"questions.{question.question_number}.topic",
-                            )
-                        )
-                    elif len(topics_per_unit.get(question.unit, set())) >= 2:
-                        issues.append(
-                            ValidationIssue(
-                                code="exact_duplicate_topic"
-                                if _normalize_text(original.topic) == normalized
-                                else "near_duplicate_topic",
-                                message=(
-                                    f"Question {question.question_number} in section "
-                                    f"{section_name} repeats topic '{question.topic.strip()}' "
-                                    f"on unit {question.unit} even though other topics of that "
+                                    f"on unit {unit} even though other topics of that "
                                     "unit are available."
                                 ),
                                 path=f"questions.{question.question_number}.topic",
@@ -192,7 +182,7 @@ class ValidationService:
                                 message=(
                                     f"Section {section_name} reuses topic "
                                     f"'{question.topic.strip()}' because unit "
-                                    f"{question.unit} lists no further topics. Add topics "
+                                    f"{unit} lists no further topics. Add topics "
                                     "to the syllabus for richer coverage."
                                 ),
                                 path=f"questions.{question.question_number}.topic",
@@ -200,8 +190,8 @@ class ValidationService:
                             )
                         )
 
-                normalized_first.setdefault(normalized, question)
+                normalized_first.setdefault((unit, normalized), question)
                 if signature:
-                    signature_first.setdefault(signature, question)
+                    signature_first.setdefault((unit, signature), question)
 
         return ValidationSummary(passed=not issues, issues=issues)

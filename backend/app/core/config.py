@@ -29,6 +29,11 @@ class Settings(BaseSettings):
     secret_key: str = Field(default="change-me", alias="SECRET_KEY")
     admin_email: str = Field(default="", alias="ADMIN_EMAIL")
     admin_password: str = Field(default="", alias="ADMIN_PASSWORD")
+    # Refresh lifetime is expressed in seconds so deployments can choose a
+    # precise session duration without embedding it in token code.
+    jwt_refresh_expire: int = Field(default=7 * 24 * 60 * 60, alias="JWT_REFRESH_EXPIRE")
+    # Kept for backwards-compatible environment files; new deployments should
+    # use JWT_REFRESH_EXPIRE.
     jwt_refresh_expire_days: int = Field(default=7, alias="JWT_REFRESH_EXPIRE_DAYS")
     max_upload_size: int = Field(default=52428800, alias="MAX_UPLOAD_SIZE")
     llm_timeout: int = Field(default=90, alias="LLM_TIMEOUT")
@@ -36,6 +41,19 @@ class Settings(BaseSettings):
     llm_stub: bool = Field(default=False, alias="LLM_STUB")
     generation_concurrency: int = Field(default=1, alias="GENERATION_CONCURRENCY")
     cors_origins: str = Field(default="http://localhost:3000", alias="CORS_ORIGINS")
+
+    # --- Password reset / OTP email ----------------------------------------
+    resend_api_key: str = Field(default="", alias="RESEND_API_KEY")
+    resend_from_email: str = Field(default="", alias="RESEND_FROM_EMAIL")
+    resend_from_name: str = Field(default="ExamCraft AI", alias="RESEND_FROM_NAME")
+    email_provider: str = Field(default="resend", alias="EMAIL_PROVIDER")
+    brevo_api_key: str = Field(default="", alias="BREVO_API_KEY")
+    brevo_from_email: str = Field(default="", alias="BREVO_FROM_EMAIL")
+    brevo_from_name: str = Field(default="ExamCraft AI", alias="BREVO_FROM_NAME")
+    otp_expire_minutes: int = Field(default=5, alias="OTP_EXPIRE_MINUTES")
+    otp_max_attempts: int = Field(default=5, alias="OTP_MAX_ATTEMPTS")
+    otp_resend_cooldown_seconds: int = Field(default=60, alias="OTP_RESEND_COOLDOWN_SECONDS")
+    reset_token_expire_minutes: int = Field(default=10, alias="RESET_TOKEN_EXPIRE_MINUTES")
 
 
 @lru_cache

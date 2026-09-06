@@ -75,7 +75,7 @@ def create_refresh_token(user_id: str, jti: str) -> str:
         "jti": jti,
         "type": "refresh",
         "iat": now,
-        "exp": now + timedelta(days=settings.jwt_refresh_expire_days),
+        "exp": now + timedelta(seconds=settings.jwt_refresh_expire),
     }
     return _encode(payload)
 

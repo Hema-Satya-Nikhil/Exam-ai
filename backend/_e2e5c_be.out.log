@@ -1,0 +1,37 @@
+warning: The `fitz` API is deprecated and will be removed in future. Use `import pymupdf` instead.
+INFO:     127.0.0.1:60494 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61464 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50765 - "OPTIONS /api/auth/forgot-password HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50765 - "POST /api/auth/forgot-password HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61464 - "GET /api/auth/test/outbox?email=e2e.reset.faculty%40test.com HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50765 - "OPTIONS /api/auth/verify-reset-otp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58588 - "POST /api/auth/verify-reset-otp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58588 - "OPTIONS /api/auth/reset-password HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50765 - "POST /api/auth/reset-password HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61464 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61464 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61464 - "POST /api/auth/login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:58548 - "OPTIONS /api/auth/forgot-password HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58548 - "POST /api/auth/forgot-password HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58510 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54252 - "OPTIONS /api/auth/forgot-password HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54252 - "POST /api/auth/forgot-password HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58510 - "GET /api/auth/test/outbox?email=e2e.reset.faculty%40test.com HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54252 - "OPTIONS /api/auth/verify-reset-otp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64191 - "POST /api/auth/verify-reset-otp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64191 - "OPTIONS /api/auth/reset-password HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54252 - "POST /api/auth/reset-password HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58510 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58510 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58510 - "POST /api/auth/login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:65525 - "OPTIONS /api/auth/forgot-password HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65525 - "POST /api/auth/forgot-password HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54672 - "GET /api/auth/test/outbox?email=probe@test.com HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54672 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51939 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51939 - "GET /api/auth/test/outbox?email=probe@qa.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58228 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58228 - "GET /api/auth/test/outbox?email=probe@qa.test HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55916 - "OPTIONS /api/auth/register HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55916 - "POST /api/auth/register HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:59576 - "OPTIONS /api/auth/register HTTP/1.1" 200 OK

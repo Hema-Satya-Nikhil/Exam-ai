@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import Field
+from app.schemas.paper_review import CompositeQuestionTarget
+from pydantic import BaseModel
 
 from app.schemas.academic import GeneratedQuestionRead
 
@@ -17,12 +19,12 @@ class PaperDraftRead(BaseModel):
     title: str
     status: Literal["draft", "under_review", "approved", "exported"]
     locked_question_numbers: list[int] = Field(default_factory=list)
+    locked_question_keys: list[str] = Field(default_factory=list)
     paper_json: dict
     validation_passed: bool = False
 
 
-class PaperQuestionUpdate(BaseModel):
-    question_number: int
+class PaperQuestionUpdate(CompositeQuestionTarget):
     question_text: Optional[str] = None
     unit: Optional[int] = None
     topic: Optional[str] = None
@@ -31,8 +33,8 @@ class PaperQuestionUpdate(BaseModel):
     question_type: Optional[str] = None
 
 
-class PaperLockRequest(BaseModel):
-    question_number: int
+class PaperLockRequest(CompositeQuestionTarget):
+    pass
 
 
 class PaperApprovalRequest(BaseModel):

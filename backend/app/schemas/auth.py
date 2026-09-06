@@ -26,12 +26,18 @@ class RegisterRequest(BaseModel):
     full_name: str = Field(..., min_length=1, max_length=255)
     password: str = Field(..., min_length=8)
     role: RoleName = "faculty"
+    # When true, the new account ALSO gets a PENDING admin-access request.
+    # This never grants the ADMIN role directly and never sets the protected
+    # primary-admin flag — an existing administrator must approve the request.
+    request_admin: bool = False
 
 
 class RegisterResponse(BaseModel):
     user_id: str
     email: EmailStr
     status: str = "pending"
+    # Present only when the registration included an admin-access request.
+    admin_request_status: str | None = None
 
 
 class RefreshRequest(BaseModel):
@@ -61,3 +67,40 @@ class UserContext(BaseModel):
 
     def has_role(self, *names: str) -> bool:
         return bool(set(self.roles) & set(names))
+
+
+# ---------------------------------------------------------------------------
+# Password reset (forgot-password OTP flow)
+# ---------------------------------------------------------------------------
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ForgotPasswordResponse(BaseModel):
+    """Deliberately generic — never reveals whether the account exists."""
+
+    message: str = (
+        "If an account exists for this email, a password reset OTP has been sent."
+    )
+
+
+class VerifyResetOtpRequest(BaseModel):
+    email: EmailStr
+    otp: str = Field(..., min_length=6, max_length=6, pattern=r"^\d{6}$")
+
+
+class VerifyResetOtpResponse(BaseModel):
+    """Short-lived, single-use password-reset authorization (NOT a login JWT)."""
+
+    reset_token: str
+
+
+class ResetPasswordRequest(BaseModel):
+    reset_token: str = Field(..., min_length=16, max_length=256)
+    new_password: str = Field(..., min_length=8)
+
+
+class ResetPasswordResponse(BaseModel):
+    message: str = "Password reset successfully."
+

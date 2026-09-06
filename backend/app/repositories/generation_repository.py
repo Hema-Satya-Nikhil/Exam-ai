@@ -74,12 +74,15 @@ class GenerationRepository:
         )
         return result.scalars().all()
 
-    async def create_paper(self, job_id: str, title: str, paper_id: str | None = None) -> GeneratedPaper:
+    async def create_paper(self, job_id: str, title: str, paper_id: str | None = None, created_by: str | None = None) -> GeneratedPaper:
         paper = GeneratedPaper(
             id=paper_id,
             generation_job_id=job_id,
             title=title,
             status="draft",
+            # Link ownership to the faculty who triggered generation so the
+            # dashboard "Recent Papers" list can filter by authenticated user.
+            created_by=created_by,
         )
         self.session.add(paper)
         await self.session.flush()

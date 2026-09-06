@@ -11,10 +11,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies.auth import get_current_user, get_db
 from app.api.routes.generation_deps import ensure_job_access
-from app.models.academic import QuestionBlueprint
+from app.models.academic import QuestionBlueprint, User
 from app.models.generation import GeneratedPaper, GeneratedQuestion, GenerationJob
 from app.schemas.academic import PaperBlueprint
-from app.schemas.auth import UserContext
 from app.schemas.generation import (
     BatchGenerationResult,
     GenerationJobCreate,
@@ -71,7 +70,7 @@ class _ExistingJob(Exception):
 
 
 async def _create_job_record(db, payload: GenerationJobCreate,
-                             user: UserContext) -> GenerationJob:
+                             user: User) -> GenerationJob:
     """Persist QuestionBlueprint + queued GenerationJob owned by the caller."""
     fingerprint = _fingerprint(payload.blueprint)
     existing = (await db.execute(
@@ -119,7 +118,7 @@ generation_service = GenerationService()
 async def create_generation_job(
     request: GenerationJobCreate,
     response: Response,
-    current_user: UserContext = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> GenerationJobRead:
     """Queue an asynchronous generation job; returns immediately.
@@ -157,7 +156,7 @@ async def create_generation_job(
 @router.get("/jobs/{job_id}", response_model=GenerationJobRead)
 async def get_generation_job_status(
     job_id: str,
-    current_user: UserContext = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> GenerationJobRead:
     job = await db.get(GenerationJob, job_id)
@@ -171,7 +170,7 @@ async def get_generation_job_status(
 @router.post("/jobs/{job_id}/resume", response_model=GenerationJobRead)
 async def resume_generation_job(
     job_id: str,
-    current_user: UserContext = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> GenerationJobRead:
     """Resume a failed job; checkpointed questions are NOT regenerated."""
@@ -196,7 +195,7 @@ async def resume_generation_job(
 @router.post("/jobs/{job_id}/cancel", response_model=GenerationJobRead)
 async def cancel_generation_job(
     job_id: str,
-    current_user: UserContext = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> GenerationJobRead:
     job = await db.get(GenerationJob, job_id)
@@ -227,7 +226,7 @@ from sqlalchemy import select
 from uuid import uuid4
 
 
-async def _persist_audit_graph(blueprint: PaperBlueprint, paper_id: str, paper_json: dict) -> None:
+async def _persist_audit_graph(blueprint: PaperBlueprint, paper_id: str, paper_json: dict, created_by: str | None = None) -> None:
     """Persist the minimal Postgres rows the audit models demand.
 
     The in-process generation flow never touches the DB (repo=None), but
@@ -264,6 +263,9 @@ async def _persist_audit_graph(blueprint: PaperBlueprint, paper_id: str, paper_j
         gp = GeneratedPaper(
             id=paper_id, generation_job_id=job.id, current_version_id=None,
             title=f"{blueprint.exam_type} - {blueprint.subject}", status="approved",
+            # Link ownership to the faculty who triggered generation so the
+            # dashboard "Recent Papers" list can filter by authenticated user.
+            created_by=created_by,
         )
         db.add(gp)
         await db.flush()
@@ -299,7 +301,8 @@ async def generate_single_question(request: QuestionGenerationRequest) -> dict[s
 
 
 @router.post("/papers/generate", response_model=BatchGenerationResult)
-async def generate_paper(request: GenerationJobCreate) -> BatchGenerationResult:
+async def generate_paper(request: GenerationJobCreate,
+                         current_user: User = Depends(get_current_user)) -> BatchGenerationResult:
     try:
         result = await generation_service.generate_paper_from_blueprint(request)
     except ValueError as exc:
@@ -308,8 +311,7 @@ async def generate_paper(request: GenerationJobCreate) -> BatchGenerationResult:
     # graph; Approval/ExportAudit commits would otherwise raise IntegrityError.
     # Create the rows best-effort -- never block a successful generation.
     try:
-        await _persist_audit_graph(request.blueprint, result.paper_id, result.paper_json)
+        await _persist_audit_graph(request.blueprint, result.paper_id, result.paper_json, created_by=current_user.user_id)
     except Exception as exc:  # pragma: no cover
         print(f"[generation] audit-graph persistence skipped: {exc}", flush=True)
     return result
-

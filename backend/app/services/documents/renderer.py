@@ -15,23 +15,46 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, Tabl
 class StructuredPaperRenderer:
     def render_pdf(self, paper_json: dict, output_path: Path) -> Path:
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        doc = SimpleDocTemplate(str(output_path), pagesize=A4, leftMargin=18 * mm, rightMargin=18 * mm, topMargin=16 * mm, bottomMargin=16 * mm)
+        doc = SimpleDocTemplate(
+            str(output_path), pagesize=A4,
+            leftMargin=18 * mm, rightMargin=18 * mm,
+            topMargin=16 * mm, bottomMargin=16 * mm,
+        )
         styles = getSampleStyleSheet()
-        title_style = ParagraphStyle(name="TitleGlass", parent=styles["Title"], fontSize=16, leading=20, alignment=1, spaceAfter=10)
-        heading_style = ParagraphStyle(name="HeadingGlass", parent=styles["Heading2"], fontSize=11, leading=14, spaceBefore=8, spaceAfter=4)
-        body_style = ParagraphStyle(name="BodyGlass", parent=styles["BodyText"], fontSize=9.5, leading=13)
+        title_style = ParagraphStyle(
+            name="TitleGlass", parent=styles["Title"],
+            fontSize=16, leading=20, alignment=1, spaceAfter=10,
+        )
+        heading_style = ParagraphStyle(
+            name="HeadingGlass", parent=styles["Heading2"],
+            fontSize=11, leading=14, spaceBefore=8, spaceAfter=4,
+        )
+        body_style = ParagraphStyle(
+            name="BodyGlass", parent=styles["BodyText"],
+            fontSize=9.5, leading=13,
+        )
 
-        story = []
+        story: list = []
         story.append(Paragraph(paper_json.get("institution_name", "Question Paper"), title_style))
         story.append(Paragraph(paper_json.get("department_name", "Department"), body_style))
         story.append(Spacer(1, 6))
         story.append(Paragraph(f"<b>{paper_json.get('exam_name', 'Examination')}</b>", heading_style))
-        story.append(Paragraph(f"Subject: {paper_json.get('subject_name', 'Subject')} {paper_json.get('subject_code', '')}", body_style))
-        story.append(Paragraph(f"Duration: {paper_json.get('duration_minutes', 0)} minutes | Maximum Marks: {paper_json.get('total_marks', 0)}", body_style))
+        story.append(
+            Paragraph(
+                f"Subject: {paper_json.get('subject_name', 'Subject')} {paper_json.get('subject_code', '')}",
+                body_style,
+            )
+        )
+        story.append(
+            Paragraph(
+                f"Duration: {paper_json.get('duration_minutes', 0)} minutes | Maximum Marks: {paper_json.get('total_marks', 0)}",
+                body_style,
+            )
+        )
         story.append(Spacer(1, 8))
 
         for instruction in paper_json.get("instructions", []):
-            story.append(Paragraph(f"• {instruction}", body_style))
+            story.append(Paragraph(f"\u2022 {instruction}", body_style))
         if paper_json.get("instructions"):
             story.append(Spacer(1, 6))
 
@@ -43,14 +66,13 @@ class StructuredPaperRenderer:
             table_data = [["Q No.", "Marks", "Question"]]
             for question in questions:
                 question_text = question.get("question_text", "")
-                choice_group = question.get("choice_group")
-                if choice_group:
-                    question_text = f"{question_text} [{choice_group}]"
-                table_data.append([
-                    str(question.get("question_number", "")),
-                    str(question.get("marks", "")),
-                    Paragraph(question_text, body_style),
-                ])
+                table_data.append(
+                    [
+                        str(question.get("question_number", "")),
+                        str(question.get("marks", "")),
+                        Paragraph(question_text, body_style),
+                    ]
+                )
             table = Table(table_data, colWidths=[16 * mm, 18 * mm, 145 * mm], repeatRows=1)
             table.setStyle(
                 TableStyle(
@@ -102,10 +124,10 @@ class StructuredPaperRenderer:
             if section.get("instructions"):
                 document.add_paragraph(section["instructions"])
             for question in section.get("questions", []):
-                line = f"Q{question.get('question_number', '')}. ({question.get('marks', '')} marks) {question.get('question_text', '')}"
-                if question.get("choice_group"):
-                    line += f" [{question['choice_group']}]"
+                line = (
+                    f"Q{question.get('question_number', '')}. "
+                    f"({question.get('marks', '')} marks) {question.get('question_text', '')}"
+                )
                 document.add_paragraph(line)
-
         document.save(str(output_path))
         return output_path

@@ -174,7 +174,10 @@ def test_login_invalid_password():
 
 def test_login_inactive_user():
     resp = client.post("/api/auth/login", json={"email": "inactive@test.com", "password": "SecurePass1!"})
-    assert resp.status_code == 401
+    # Inactive accounts get a distinct 403 (not the generic 401 bad-credential)
+    # so the UI can show an actionable message.
+    assert resp.status_code == 403
+    assert "awaiting administrator approval" in resp.json()["detail"].lower()
 
 
 # ---------------------------------------------------------------------------
@@ -383,14 +386,14 @@ def test_export_records_authenticated_user_id():
     payload = security.decode_access_token(token)
     user_id = payload["sub"]
 
-    # Call export (paper won't exist, so we expect 400 — but the auth/user check fires first)
+    # Call export (paper won't exist, so we expect 404 — but the auth/user check fires first)
     resp = client.post(
         "/api/papers/export",
         json={"paper_id": "nonexistent", "format": "pdf"},
         headers={"Authorization": f"Bearer {token}"},
     )
-    # 400 means auth succeeded and the service correctly rejected the missing paper
-    assert resp.status_code == 400
+    # 404 means auth succeeded and the service correctly rejected the missing paper
+    assert resp.status_code == 404
     assert user_id  # ensure we extracted a real UUID
 
 

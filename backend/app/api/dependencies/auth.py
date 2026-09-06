@@ -7,11 +7,11 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy.orm import selectinload
 
 from app.core import security
 from app.db.session import async_session_maker
 from app.models.academic import User
-from app.schemas.auth import UserContext
 
 # ---------------------------------------------------------------------------
 # OAuth2 scheme — tokenUrl points at the real login endpoint
@@ -35,7 +35,7 @@ async def get_db() -> AsyncSession:  # type: ignore[override]
 async def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: AsyncSession = Depends(get_db),
-) -> UserContext:
+) -> User:
     """Decode the Bearer access token and return the authenticated UserContext.
 
     Raises 401 on any of:
@@ -58,7 +58,9 @@ async def get_current_user(
     if not user_id:
         raise credentials_exc
 
-    result = await db.execute(select(User).where(User.id == user_id))
+    result = await db.execute(
+        select(User).options(selectinload(User.roles)).where(User.id == user_id)
+    )
     user: User | None = result.scalars().first()
 
     if user is None:
@@ -69,20 +71,14 @@ async def get_current_user(
             detail="User account is inactive",
         )
 
-    return UserContext(
-        user_id=user.id,
-        email=user.email,
-        full_name=user.full_name,
-        roles=[role.name for role in user.roles],
-        is_active=user.is_active,
-    )
+    return user
 
 
 # ---------------------------------------------------------------------------
 # RBAC helpers
 # ---------------------------------------------------------------------------
 
-def require_roles(*allowed_roles: str) -> Callable[..., UserContext]:
+def require_roles(*allowed_roles: str) -> Callable[..., User]:
     """Return a FastAPI dependency that enforces role membership.
 
     Usage::
@@ -93,8 +89,15 @@ def require_roles(*allowed_roles: str) -> Callable[..., UserContext]:
         @router.get("/staff", dependencies=[Depends(require_roles("admin", "faculty"))])
         ...
     """
-    def _checker(current_user: UserContext = Depends(get_current_user)) -> UserContext:
-        if not set(current_user.roles) & set(allowed_roles):
+    normalized = {role.lower() for role in allowed_roles}
+
+    def _checker(current_user: User = Depends(get_current_user)) -> User:
+        roles = getattr(current_user, "roles", ())
+        role_names = {
+            (role.name if hasattr(role, "name") else str(role)).lower()
+            for role in roles
+        }
+        if not role_names.intersection(normalized):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Insufficient permissions",
@@ -105,15 +108,15 @@ def require_roles(*allowed_roles: str) -> Callable[..., UserContext]:
 
 
 # Keep the old name used by router.py during the previous session
-def require_role(required_roles: list[str]) -> Callable[..., UserContext]:
+def require_role(required_roles: list[str]) -> Callable[..., User]:
     """Backward-compat wrapper around require_roles()."""
     return require_roles(*required_roles)
 
 
 def require_faculty_access(
     paper_id: str,
-    current_user: UserContext = Depends(get_current_user),
-) -> UserContext:
+    current_user: User = Depends(get_current_user),
+) -> User:
     """Dependency that verifies the calling user may access a specific paper.
 
     * Admins can access everything.
@@ -123,9 +126,40 @@ def require_faculty_access(
     ownership check queries the paper_workflow_service in-process to avoid
     a circular import with the paper router.
     """
-    if "admin" in current_user.roles:
+    roles = getattr(current_user, "roles", ())
+    role_names = {
+        (role.name if hasattr(role, "name") else str(role)).lower()
+        for role in roles
+    }
+    if "admin" in role_names:
         return current_user
-    # Ownership is enforced at the service layer by passing current_user.user_id
-    # to the workflow service and checking paper.created_by.  If the service
-    # raises ValueError / returns None the route handler will 404/403.
+
+    return current_user
+
+
+async def ensure_paper_access(
+    paper_id: str,
+    current_user: User,
+    db: AsyncSession,
+) -> User:
+    """Enforce persisted paper ownership for a faculty request."""
+    roles = getattr(current_user, "roles", ())
+    role_names = {
+        (role.name if hasattr(role, "name") else str(role)).lower()
+        for role in roles
+    }
+    if "admin" in role_names:
+        return current_user
+
+    from app.models.generation import GeneratedPaper
+
+    if db is None:
+        return current_user
+    paper = await db.get(GeneratedPaper, paper_id)
+    user_id = getattr(current_user, "id", None) or getattr(current_user, "user_id", None)
+    if paper is not None and paper.created_by is not None and paper.created_by != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have access to this paper.",
+        )
     return current_user

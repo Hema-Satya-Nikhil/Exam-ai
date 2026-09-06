@@ -32,8 +32,22 @@ class User(Base, TimestampMixin):
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    # Protected Main Admin flag. Exactly ONE user may hold this (enforced by
+    # the partial unique index ``uq_users_one_primary_admin``). Bootstrap comes
+    # from ADMIN_EMAIL, but ALL runtime authorization reads this column —
+    # never the email.
+    is_primary_admin: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     roles: Mapped[list[Role]] = relationship(secondary=user_roles, lazy="selectin")
+
+    @property
+    def user_id(self) -> str:
+        """Compatibility accessor for route code while returning the model itself."""
+        return self.id
+
+    def has_role(self, *names: str) -> bool:
+        allowed = {name.lower() for name in names}
+        return any((role.name or "").lower() in allowed for role in self.roles)
 
 
 class Role(Base, TimestampMixin):
@@ -149,6 +163,7 @@ class PaperTemplate(Base, TimestampMixin):
     name: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
     description: Mapped[Optional[str]] = mapped_column(Text)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    created_by: Mapped[Optional[str]] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), index=True)
 
     versions: Mapped[list[PaperTemplateVersion]] = relationship(back_populates="template", cascade="all, delete-orphan")
 

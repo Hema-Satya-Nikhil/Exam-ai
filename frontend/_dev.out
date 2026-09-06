@@ -1,0 +1,41 @@
+
+> question-paper-generator-frontend@0.1.0 dev
+> next dev --port 3000
+
+   ▲ Next.js 15.0.3
+   - Local:        http://localhost:3000
+   - Environments: .env.local
+   - Experiments (use with caution):
+     · typedRoutes
+
+ ✓ Starting...
+ ✓ Ready in 16.5s
+ ○ Compiling /login ...
+ ✓ Compiled /login in 31.2s (741 modules)
+ ✓ Compiled in 3.1s (365 modules)
+ GET /login 200 in 55ms
+ GET /login 200 in 164ms
+ ○ Compiling / ...
+ ✓ Compiled / in 1233ms (753 modules)
+ GET / 200 in 1824ms
+ GET / 200 in 79ms
+ ○ Compiling /create ...
+ ✓ Compiled /create in 2.6s (855 modules)
+ GET /create 200 in 3096ms
+ ○ Compiling /login ...
+ ✓ Compiled /login in 641ms (459 modules)
+ GET /login 200 in 973ms
+ ○ Compiling /admin ...
+ ✓ Compiled /admin in 1642ms (885 modules)
+ GET /admin 200 in 2108ms
+ GET /admin?tab=audit 200 in 194ms
+ ○ Compiling /dashboard ...
+ ✓ Compiled /dashboard in 1146ms (900 modules)
+ GET /dashboard 200 in 1463ms
+ GET /dashboard 200 in 63ms
+ GET /dashboard 200 in 42ms
+ GET /create 200 in 216ms
+ GET /login 200 in 457ms
+ GET /dashboard 200 in 62ms
+ ○ Compiling /settings ...
+ ✓ Compiled /review in 11.4s (959 modules)

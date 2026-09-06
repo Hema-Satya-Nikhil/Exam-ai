@@ -33,6 +33,37 @@ _SECTION_RE = re.compile(
     r"^\s*(course\s+)?(outcomes?|objectives?)\s*[:]?\s*$", re.IGNORECASE
 )
 
+# A content header such as "Processes:" or "Threads and Concurrency :" followed
+# by the (possibly comma-separated) topic list on the same line.
+_TOPIC_HEADER_RE = re.compile(r"^(.{2,90}?)\s*:\s*(.+)$")
+
+# Separator between atomic topics inside one line. Commas/semicolons only —
+# never split on whitespace, hyphens or "and" (they occur inside topic names).
+_TOPIC_SEPARATOR_RE = re.compile(r"\s*[,;]\s*")
+
+
+def _clean_fragment(fragment: str) -> str:
+    """Trim punctuation/whitespace artifacts from one candidate topic name."""
+    fragment = fragment.strip()
+    # Leading/trailing sentence periods, stray separators and wrapping hyphens
+    # (a leading ':' appears when a header colon lands on its own wrapped line).
+    fragment = fragment.strip(" \t\u00a0").lstrip(":;.,").rstrip(".;,: \t\u00a0").strip()
+    # Normalize OCR/PDF whitespace runs ("Ope rating" spaces are ambiguous —
+    # only multi-space runs are collapsed; we never re-join or invent words).
+    fragment = re.sub(r"\s{2,}", " ", fragment)
+    return fragment
+
+
+def _split_atomic(text: str) -> list[str]:
+    """Split one line into atomic topic names (comma/semicolon separated)."""
+    topics: list[str] = []
+    for fragment in _TOPIC_SEPARATOR_RE.split(text or ""):
+        name = _clean_fragment(fragment)
+        if name:
+            topics.append(name)
+    return topics
+
+
 
 def _to_unit_number(token: str) -> int | None:
     token = token.strip().lower()
@@ -43,6 +74,21 @@ def _to_unit_number(token: str) -> int | None:
     if token in _WORDS:
         return _WORDS[token]
     return None
+
+
+def _looks_like_header(text: str) -> bool:
+    """True when the text before a ':' is a section header, not a topic.
+
+    Headers are short, rarely contain separators, and typically read like a
+    noun phrase ("Processes", "Threads and Concurrency"). A long string with
+    commas is a topic list, not a header.
+    """
+    text = text.strip()
+    if not (2 <= len(text) <= 60):
+        return False
+    if "," in text or ";" in text:
+        return False
+    return True
 
 
 def _add_topic(unit: UnitRead, name: str) -> None:
@@ -58,6 +104,38 @@ class SyllabusService:
     unit_pattern = _UNIT_RE
     topic_pattern = _TOPIC_LABEL_RE
 
+    @staticmethod
+    def _physical_lines(text: str) -> list[str]:
+        """Merge PDF/OCR line-wrapping so one logical topic line stays whole.
+
+        A line that ends with ``,`` or ``;`` is a wrapped continuation of the
+        next line (e.g. ``"Process scheduling,"`` / ``"Operations on processes."``).
+        Only that unambiguous signal is joined — otherwise lines are left as-is.
+        """
+        merged: list[str] = []
+        buffer = ""
+        for raw in text.splitlines():
+            line = raw.strip()
+            if not line:
+                continue
+            if buffer:
+                line = f"{buffer} {line}"
+                buffer = ""
+            if line.endswith((",", ";")):
+                buffer = line
+                continue
+            merged.append(line)
+        if buffer:
+            merged.append(buffer)
+        return merged
+
+    @staticmethod
+    def _add_atomic_topics(unit: UnitRead, text: str) -> None:
+        """Add each atomic comma-separated fragment as its own topic."""
+        for name in _split_atomic(text):
+            _add_topic(unit, name)
+
+
     def parse_text(self, extracted_text: str, source_file_name: str) -> SyllabusParseResult:
         units: list[UnitRead] = []
         notes: list[str] = []
@@ -66,7 +144,7 @@ class SyllabusService:
         saw_heading = False
         pending_title = False
 
-        for raw_line in (extracted_text or "").splitlines():
+        for raw_line in self._physical_lines(extracted_text or ""):
             line = raw_line.strip()
             if not line:
                 continue
@@ -97,22 +175,43 @@ class SyllabusService:
 
             # A short standalone line immediately after a heading with no inline
             # title is the unit title (e.g. "UNIT - I" then "Introduction to DB").
+            # A colon header ("Processes: A, B, C") or comma list is content,
+            # never a title — capturing it as the title would swallow the
+            # whole first topic group of the unit.
+            header_here = _TOPIC_HEADER_RE.match(line)
             topic_label_match = self.topic_pattern.match(line)
             bullet = _BULLET_RE.match(line)
-            if pending_title and not topic_label_match and not bullet and len(line) <= 120:
+            is_content_line = bool(
+                topic_label_match
+                or bullet
+                or (header_here and _looks_like_header(header_here.group(1)))
+                or "," in line
+                or line.endswith(":")
+            )
+            if pending_title and not is_content_line and len(line) <= 120:
                 current_unit.title = line
                 pending_title = False
                 continue
             pending_title = False
 
-            topic_label_match = self.topic_pattern.match(line)
-            bullet = _BULLET_RE.match(line)
             if topic_label_match:
-                _add_topic(current_unit, topic_label_match.group(1))
+                # "Topic: A, B, C" — the label part may itself carry a list.
+                self._add_atomic_topics(current_unit, topic_label_match.group(1))
             elif bullet:
-                _add_topic(current_unit, bullet.group(1))
+                self._add_atomic_topics(current_unit, bullet.group(1))
             else:
-                _add_topic(current_unit, line)
+                header = _TOPIC_HEADER_RE.match(line)
+                if header and _looks_like_header(header.group(1)):
+                    # "Processes: Process Concept, Process scheduling, ..."
+                    # The part before ':' is a GROUP HEADING for the
+                    # confirmation UI — it is NOT a question topic (it would
+                    # produce vague questions). Only the atomic items after
+                    # the colon become topics.
+                    self._add_atomic_topics(current_unit, header.group(2))
+                else:
+                    # A plain line: atomic-split if it is a comma list,
+                    # otherwise it is one topic (e.g. a unit title line).
+                    self._add_atomic_topics(current_unit, line)
 
         if not saw_heading:
             warnings.append("No explicit unit headings were detected; faculty confirmation is required.")

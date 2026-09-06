@@ -12,6 +12,7 @@ from app.schemas.generation import BatchGenerationResult, GenerationJobCreate, G
 from app.services.blueprint_service import BlueprintService
 from app.services.llm.nvidia import NVIDIAProvider
 from app.services.paper_workflow_service import PaperWorkflowService
+from app.services.question_text_sanitizer import sanitize_question_text
 from app.services.validation_service import ValidationService
 
 
@@ -104,7 +105,9 @@ class GenerationService:
 
         for attempt in range(1, max_attempts + 1):
             payload = await self.provider.generate_question(requirement, source_context, feedback)
-            question_text = str(payload.get("question_text", "")).strip()
+            question_text = sanitize_question_text(
+                str(payload.get("question_text", "")).strip()
+            )
             validation = self.validator.validate_question(requirement, question_text)
             if validation.passed:
                 return GeneratedQuestionRead(

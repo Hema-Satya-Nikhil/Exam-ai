@@ -41,7 +41,7 @@ def test_validate_blueprint_marks_and_sections() -> None:
     assert result.issues == []
 
 
-def test_validate_blueprint_rejects_unit_scope_and_duplicates() -> None:
+def test_validate_blueprint_rejects_unit_scope_not_crossunit_topic() -> None:
     blueprint = PaperBlueprint(
         exam_type="Mid 1",
         subject="Data Mining",
@@ -78,8 +78,12 @@ def test_validate_blueprint_rejects_unit_scope_and_duplicates() -> None:
 
     assert result.passed is False
     codes = {issue.code for issue in result.issues}
+    # Q2 uses unit 5 which is outside the selected scope -> error.
     assert "unit_out_of_scope" in codes
-    assert "exact_duplicate_topic" in codes
+    # The same topic on *different* units is legitimate — it must NOT be
+    # flagged as a duplicate (only the out-of-scope unit is).
+    assert "exact_duplicate_topic" not in codes
+    assert "near_duplicate_topic" not in codes
 
 
 def test_validate_blueprint_rejects_non_contiguous_numbering() -> None:

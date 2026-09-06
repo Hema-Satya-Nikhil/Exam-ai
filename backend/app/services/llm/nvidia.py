@@ -60,6 +60,35 @@ class _IncompleteGeneration(Exception):
         super().__init__(failure_class)
 
 
+def _safe_provider_message(response: httpx.Response) -> str:
+    """Extract a bounded provider message without returning request secrets."""
+    try:
+        body = response.json()
+        if isinstance(body, dict):
+            error = body.get("error")
+            if isinstance(error, dict):
+                message = error.get("message") or error.get("code")
+            else:
+                message = body.get("message") or body.get("code") or error
+            if message:
+                return str(message)[:240]
+    except (ValueError, TypeError):
+        pass
+    return ""
+
+
+def _http_failure_category(status_code: int) -> str:
+    if status_code in (401, 403):
+        return "authentication_or_permission"
+    if status_code in (404, 410):
+        return "model_or_endpoint_unavailable"
+    if status_code == 429:
+        return "rate_limited_or_quota_exceeded"
+    if status_code >= 500:
+        return "provider_unavailable"
+    return "provider_http_error"
+
+
 async def _sleep(seconds: float) -> None:
     """Indirection over ``asyncio.sleep`` so tests can short-circuit backoff."""
     await asyncio.sleep(seconds)
@@ -174,7 +203,13 @@ class NVIDIAProvider(LLMProvider):
                     _telemetry("failed", "read_write_timeout", None, False)
                 except httpx.HTTPStatusError as exc:
                     last_error = exc
-                    reason = f"HTTP {exc.response.status_code}"
+                    provider_message = _safe_provider_message(exc.response)
+                    reason = (
+                        f"HTTP {exc.response.status_code} "
+                        f"({_http_failure_category(exc.response.status_code)})"
+                    )
+                    if provider_message:
+                        reason += f": {provider_message}"
                     _telemetry("failed", f"http_{exc.response.status_code}", None, False)
                 except httpx.HTTPError as exc:
                     last_error = exc
@@ -200,7 +235,20 @@ class NVIDIAProvider(LLMProvider):
                 # doesn't hammer a struggling endpoint.
                 await _sleep(min(1.5 * 2 ** (attempt - 1), 8.0))
 
-        raise ValueError(f"NVIDIA request failed while generating {schema_hint}.") from last_error
+        detail = str(last_error) if isinstance(last_error, ValueError) else ""
+        if isinstance(last_error, httpx.HTTPStatusError):
+            provider_message = _safe_provider_message(last_error.response)
+            status_code = last_error.response.status_code
+            detail = (
+                f"HTTP {status_code} "
+                f"({_http_failure_category(status_code)})"
+            )
+            if provider_message:
+                detail += f": {provider_message}"
+        suffix = f" ({detail})" if detail else ""
+        raise ValueError(
+            f"NVIDIA request failed while generating {schema_hint}{suffix}."
+        ) from last_error
 
     def _compact_context(self, context: str, requirement: QuestionRequirement) -> str:
         """Condense the source-context block without losing syllabus scope.
@@ -286,6 +334,9 @@ class NVIDIAProvider(LLMProvider):
             "difficulty, question type) remain fully binding."
             if compact else ""
         )
+        # Structured metadata block (Task 6): each constraint is a labelled
+        # field, so the model never needs to restate metadata inside the text.
+        faculty_instruction = requirement.generation_instruction or "None"
         return [
             {
                 "role": "system",
@@ -293,26 +344,34 @@ class NVIDIAProvider(LLMProvider):
                     "You are an academic question generation engine for departmental examinations. "
                     "You MUST follow all supplied blueprint rules strictly. "
                     "Never alter question number, marks, unit, section, topic, or Bloom level. "
-                    "Return ONLY a JSON object with 'question_text' (string) and 'source_references' (array of objects)."
+                    "Return ONLY a JSON object with 'question_text' (string) and 'source_references' (array of objects). "
+                    "IMPORTANT: 'question_text' must contain ONLY the question itself. "
+                    "Do NOT include question numbers or numbering prefixes (e.g. '16.'), marks or "
+                    "'(5 marks)' fragments, section names ('Section A/B/C'), unit labels, topic labels, "
+                    "Bloom labels, difficulty labels, choice labels, or any explanatory prefix — "
+                    "the application adds all metadata itself. "
+                    "The question must be strictly and meaningfully about the given TOPIC; do not "
+                    "drift to other syllabus material."
                 ),
             },
             {
                 "role": "user",
                 "content": (
-                    f"Generate question {requirement.question_number} for section '{requirement.section}'.\n"
-                    f"Marks: {requirement.marks}\n"
-                    f"Unit: {requirement.unit}\n"
-                    f"Topic: {requirement.topic}\n"
-                    f"Bloom Level: {requirement.bloom_level} (Use verbs such as: {target_verbs})\n"
-                    f"Difficulty: {requirement.difficulty}\n"
-                    f"Question Type: {requirement.question_type}"
+                    f"UNIT:\n{requirement.section or requirement.unit}\n\n"
+                    f"TOPIC:\n{requirement.topic}\n\n"
+                    f"MARKS:\n{requirement.marks}\n\n"
+                    f"BLOOM:\n{requirement.bloom_level} (Use verbs such as: {target_verbs})\n\n"
+                    f"DIFFICULTY:\n{requirement.difficulty}\n\n"
+                    f"QUESTION TYPE:\n{requirement.question_type}\n\n"
+                    f"FACULTY INSTRUCTION:\n{faculty_instruction}\n\n"
                     f"{length_rule}\n"
-                    f"{compact_note}"
+                    f"{compact_note}\n"
                     f"Context & Source Materials: {effective_context}"
                     f"{correction}"
                 ),
             },
         ]
+
 
     def _analysis_messages(self, paper_text: str) -> list[dict[str, str]]:
         return [

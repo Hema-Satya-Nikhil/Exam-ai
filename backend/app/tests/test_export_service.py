@@ -534,24 +534,217 @@ async def test_export_persists_audit_status_and_log(
     assert paper.status == "approved", f"Expected status 'approved', got {paper.status!r}"
 
 # ---------------------------------------------------------------------------
-# 9 — Unapproved (draft) paper → 400
+# 9 — Export is VALIDATION-gated, not approval-gated:
+#     a draft with clean validation exports; failing validation → 400
 # ---------------------------------------------------------------------------
 
-async def test_export_unapproved_paper_rejected(
+async def test_export_draft_with_clean_validation_succeeds(
     async_client: AsyncClient,
     faculty_token: str,
     draft_paper_id: str,
 ) -> None:
+    """The manual paper-approval step was removed: a draft whose persisted
+    validation state carries no blocking issues is exportable directly."""
+    resp = await async_client.post(
+        "/api/papers/export",
+        json={"paper_id": draft_paper_id, "format": "pdf"},
+        headers={"Authorization": f"Bearer {faculty_token}"},
+    )
+    assert resp.status_code == 200, resp.text
+
+
+async def test_export_blocked_by_validation_failure(
+    async_client: AsyncClient,
+    faculty_token: str,
+    draft_paper_id: str,
+) -> None:
+    """Blocking (error-severity) validation issues persisted in the database
+    prevent export — the DB validation record is the source of truth."""
+    from sqlalchemy import update
+
+    from app.models.generation import PaperVersion
+
+    failing_json = _make_paper_json("blocked")
+    failing_json["validation"] = {
+        "passed": False,
+        "issues": [
+            {"severity": "error", "code": "exact_duplicate_topic",
+             "message": "Question 10 repeats topic 'X' on unit 2"}
+        ],
+    }
+    async with TestSession() as session:
+        await session.execute(
+            update(PaperVersion)
+            .where(PaperVersion.generated_paper_id == draft_paper_id)
+            .values(paper_json=failing_json)
+        )
+        await session.commit()
+
     resp = await async_client.post(
         "/api/papers/export",
         json={"paper_id": draft_paper_id, "format": "pdf"},
         headers={"Authorization": f"Bearer {faculty_token}"},
     )
     assert resp.status_code == 400
-    assert "not approved" in resp.json()["detail"].lower()
+    assert "exact_duplicate_topic" in resp.json()["detail"]
+
 
 # ---------------------------------------------------------------------------
-# 10 — Missing paper → 400
+# Composite validation record - persisted shape + export gate behavior
+# ---------------------------------------------------------------------------
+
+def test_build_validation_record_shape() -> None:
+    """The composite validation record keeps ``passed`` + ``errors`` + ``warnings``
+    (only error-severity issues are "errors") plus a legacy-aligned ``issues`` list."""
+    from app.schemas.generation import ValidationIssue, ValidationSummary
+    from app.services.exam_generation_service import _build_validation_record
+
+    summary = ValidationSummary(
+        passed=False,
+        issues=[
+            ValidationIssue(code="part_a_count", message="Part A defaults to exactly 10 questions."),
+            ValidationIssue(code="topic_pool_exhausted",
+                            message="Section reuses a topic.", severity="warning"),
+        ],
+    )
+    record = _build_validation_record(summary)
+    assert record["passed"] is False
+    assert [e["code"] for e in record["errors"]] == ["part_a_count"]
+    assert [w["code"] for w in record["warnings"]] == ["topic_pool_exhausted"]
+    assert len(record["issues"]) == 2  # legacy-aligned combined list preserved
+
+    passed = _build_validation_record(ValidationSummary(passed=True, issues=[]))
+    assert passed["passed"] is True
+    assert passed["errors"] == [] and passed["warnings"] == [] and passed["issues"] == []
+
+
+async def test_export_composite_validation_passed_succeeds(
+    async_client: AsyncClient,
+    faculty_token: str,
+    draft_paper_id: str,
+) -> None:
+    """A paper carrying the explicit composite-shape record
+    ``{"passed": True, "errors": [], "warnings": []}`` is exportable directly."""
+    from sqlalchemy import update
+
+    from app.models.generation import PaperVersion
+
+    passing_json = _make_paper_json("ok")
+    passing_json["validation"] = {"passed": True, "errors": [], "warnings": []}
+    async with TestSession() as session:
+        await session.execute(
+            update(PaperVersion)
+            .where(PaperVersion.generated_paper_id == draft_paper_id)
+            .values(paper_json=passing_json)
+        )
+        await session.commit()
+
+    resp = await async_client.post(
+        "/api/papers/export",
+        json={"paper_id": draft_paper_id, "format": "pdf"},
+        headers={"Authorization": f"Bearer {faculty_token}"},
+    )
+    assert resp.status_code == 200, resp.text
+
+async def test_export_composite_validation_errors_block(
+    async_client: AsyncClient,
+    faculty_token: str,
+    draft_paper_id: str,
+) -> None:
+    """A composite record with error-severity items blocks export - warnings alone
+    never block, but errors always do."""
+    from sqlalchemy import update
+
+    from app.models.generation import PaperVersion
+
+    failing_json = _make_paper_json("blocked")
+    failing_json["validation"] = {
+        "passed": False,
+        "errors": [
+            {"severity": "error", "code": "part_b_attempted_mismatch",
+             "message": "Part B attempted marks (10) != configured total (20)."}
+        ],
+        "warnings": [
+            {"severity": "warning", "code": "topic_pool_exhausted",
+             "message": "Section reuses a topic."}
+        ],
+    }
+    async with TestSession() as session:
+        await session.execute(
+            update(PaperVersion)
+            .where(PaperVersion.generated_paper_id == draft_paper_id)
+            .values(paper_json=failing_json)
+        )
+        await session.commit()
+
+    resp = await async_client.post(
+        "/api/papers/export",
+        json={"paper_id": draft_paper_id, "format": "pdf"},
+        headers={"Authorization": f"Bearer {faculty_token}"},
+    )
+    assert resp.status_code == 400
+    assert "part_b_attempted_mismatch" in resp.json()["detail"]
+
+
+async def test_export_composite_empty_errors_but_passed_false_still_blocks(
+    async_client: AsyncClient,
+    faculty_token: str,
+    draft_paper_id: str,
+) -> None:
+    """Even with an empty errors list, an explicit ``passed: False`` composite
+    record still blocks export (validation is never weakened)."""
+    from sqlalchemy import update
+
+    from app.models.generation import PaperVersion
+
+    failing_json = _make_paper_json("blocked")
+    failing_json["validation"] = {"passed": False, "errors": [], "warnings": []}
+    async with TestSession() as session:
+        await session.execute(
+            update(PaperVersion)
+            .where(PaperVersion.generated_paper_id == draft_paper_id)
+            .values(paper_json=failing_json)
+        )
+        await session.commit()
+
+    resp = await async_client.post(
+        "/api/papers/export",
+        json={"paper_id": draft_paper_id, "format": "pdf"},
+        headers={"Authorization": f"Bearer {faculty_token}"},
+    )
+    assert resp.status_code == 400
+
+
+async def test_export_legacy_flat_validation_passed_unchanged(
+    async_client: AsyncClient,
+    faculty_token: str,
+    draft_paper_id: str,
+) -> None:
+    """Legacy flat ValidationSummary shape ``{"passed": True, "issues": []}``
+    keeps working - the legacy path is unchanged by the composite record."""
+    from sqlalchemy import update
+
+    from app.models.generation import PaperVersion
+
+    passing_json = _make_paper_json("ok")
+    passing_json["validation"] = {"passed": True, "issues": []}
+    async with TestSession() as session:
+        await session.execute(
+            update(PaperVersion)
+            .where(PaperVersion.generated_paper_id == draft_paper_id)
+            .values(paper_json=passing_json)
+        )
+        await session.commit()
+
+    resp = await async_client.post(
+        "/api/papers/export",
+        json={"paper_id": draft_paper_id, "format": "pdf"},
+        headers={"Authorization": f"Bearer {faculty_token}"},
+    )
+    assert resp.status_code == 200, resp.text
+
+# ---------------------------------------------------------------------------
+# 10 — Missing paper → 404
 # ---------------------------------------------------------------------------
 
 async def test_export_missing_paper_rejected(
@@ -563,7 +756,7 @@ async def test_export_missing_paper_rejected(
         json={"paper_id": "does-not-exist", "format": "pdf"},
         headers={"Authorization": f"Bearer {faculty_token}"},
     )
-    assert resp.status_code == 400
+    assert resp.status_code == 404
 
 # ---------------------------------------------------------------------------
 # 11 — User with no roles → 403
@@ -873,3 +1066,47 @@ async def test_export_audit_resolves_latest_version_when_current_version_id_unse
     audits = await _query_export_audits(paper_id)
     assert len(audits) == 1
     assert audits[0].approved_version == version_id
+
+
+async def test_export_download_content_disposition_uses_subject_filename(
+    async_client: AsyncClient,
+    faculty_token: str,
+    approved_paper_id: str,
+) -> None:
+    """The download endpoint must stream with a Content-Disposition filename
+    derived from the paper's persisted SUBJECT (paper_json["subject_name"]),
+    suffixed with `_Exam_ai` — never the paper UUID or title."""
+    # subject_name in the fixture paper_json is "Data Mining"
+    for fmt, expected in (("pdf", "DataMining_Exam_ai.pdf"), ("docx", "DataMining_Exam_ai.docx")):
+        resp = await async_client.get(
+            "/api/papers/export/download",
+            params={"paper_id": approved_paper_id, "format": fmt},
+            headers={"Authorization": f"Bearer {faculty_token}"},
+        )
+        assert resp.status_code == 200, resp.text
+        cd = resp.headers.get("content-disposition", "")
+        assert "attachment" in cd, f"expected attachment disposition, got {cd!r}"
+        assert expected in cd, f"expected {expected!r} in disposition, got {cd!r}"
+        # No UUID / no spaces / no title leak in the user-facing filename
+        assert approved_paper_id not in cd
+        assert " " not in cd.split("filename=")[-1]
+
+
+async def test_export_download_filename_is_deterministic_across_exports(
+    async_client: AsyncClient,
+    faculty_token: str,
+    approved_paper_id: str,
+) -> None:
+    """Repeated exports of the same subject must yield the identical filename."""
+    names = []
+    for _ in range(3):
+        resp = await async_client.get(
+            "/api/papers/export/download",
+            params={"paper_id": approved_paper_id, "format": "pdf"},
+            headers={"Authorization": f"Bearer {faculty_token}"},
+        )
+        assert resp.status_code == 200, resp.text
+        cd = resp.headers["content-disposition"]
+        names.append(cd.split("filename=", 1)[-1].strip('"'))
+    assert len(set(names)) == 1, f"filename not deterministic: {names}"
+    assert names[0] == "DataMining_Exam_ai.pdf"

@@ -1,0 +1,1280 @@
+﻿node.exe : npm warn Expanding --ci to --cidr. This will stop working in the next major version of npm.
+At C:\Program Files\nodejs\npm.ps1:29 char:3
++   & $NODE_EXE $NPM_CLI_JS $args
++   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (npm warn Expand...version of npm.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+> question-paper-generator-frontend@0.1.0 test
+> jest
+
+PASS __tests__/design-system.test.tsx (13.628 s)
+PASS __tests__/login-register.test.tsx (13.922 s)
+PASS __tests__/generation-experience.test.tsx (14.166 s)
+PASS __tests__/settings-page.test.tsx (14.216 s)
+PASS __tests__/auth-ux.test.tsx (15.203 s)
+PASS __tests__/wizard-ui.test.tsx (15.912 s)
+PASS __tests__/wizard-logic.test.ts
+PASS __tests__/landing-page.test.tsx (16.221 s)
+PASS __tests__/generation-api.test.ts
+PASS __tests__/download-filename.test.ts
+PASS __tests__/paper-review-api.test.ts
+PASS __tests__/admin-page.test.tsx (17.449 s)
+  ΓùÅ Console
+
+    console.error
+      Warning: An update to AdminPage inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at 
+https://reactjs.org/link/wrap-tests-with-act
+          at AdminPage (C:\Users\akhil\OneDrive\Desktop\Exam_craft_ai\frontend\app\admin\page.tsx:85:33)
+
+    [0m [90m 100 |[39m     [36mtry[39m {
+     [90m 101 |[39m       [36mconst[39m [u[33m,[39m p[33m,[39m a] [33m=[39m [36mawait[39m 
+[33mPromise[39m[33m.[39mall([listAdminUsers()[33m,[39m listPendingFaculty()[33m,[39m listAuditLogs()])[33m;[39m
+    [31m[1m>[22m[39m[90m 102 |[39m       setUsers(u[33m.[39musers)[33m;[39m
+     [90m     |[39m       [31m[1m^[22m[39m
+     [90m 103 |[39m       setPending(p[33m.[39musers)[33m;[39m
+     [90m 104 |[39m       setAuditLogs(a[33m.[39maudit_logs)[33m;[39m
+     [90m 105 |[39m     } [36mcatch[39m (err) {[0m
+
+      at printWarning (node_modules/react-dom/cjs/react-dom.development.js:86:30)
+      at error (node_modules/react-dom/cjs/react-dom.development.js:60:7)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-dom/cjs/react-dom.development.js:27589:9)
+      at scheduleUpdateOnFiber (node_modules/react-dom/cjs/react-dom.development.js:25508:5)
+      at dispatchSetState (node_modules/react-dom/cjs/react-dom.development.js:17527:7)
+      at setUsers (app/admin/page.tsx:102:7)
+
+    console.error
+      Warning: An update to AdminPage inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at 
+https://reactjs.org/link/wrap-tests-with-act
+          at AdminPage (C:\Users\akhil\OneDrive\Desktop\Exam_craft_ai\frontend\app\admin\page.tsx:85:33)
+
+    [0m [90m 101 |[39m       [36mconst[39m [u[33m,[39m p[33m,[39m a] [33m=[39m [36mawait[39m 
+[33mPromise[39m[33m.[39mall([listAdminUsers()[33m,[39m listPendingFaculty()[33m,[39m listAuditLogs()])[33m;[39m
+     [90m 102 |[39m       setUsers(u[33m.[39musers)[33m;[39m
+    [31m[1m>[22m[39m[90m 103 |[39m       setPending(p[33m.[39musers)[33m;[39m
+     [90m     |[39m       [31m[1m^[22m[39m
+     [90m 104 |[39m       setAuditLogs(a[33m.[39maudit_logs)[33m;[39m
+     [90m 105 |[39m     } [36mcatch[39m (err) {
+     [90m 106 |[39m       setError(err [36minstanceof[39m [33mError[39m [33m?[39m err[33m.[39mmessage [33m:[39m 
+[32m'Failed to load admin data.'[39m)[33m;[39m[0m
+
+      at printWarning (node_modules/react-dom/cjs/react-dom.development.js:86:30)
+      at error (node_modules/react-dom/cjs/react-dom.development.js:60:7)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-dom/cjs/react-dom.development.js:27589:9)
+      at scheduleUpdateOnFiber (node_modules/react-dom/cjs/react-dom.development.js:25508:5)
+      at dispatchSetState (node_modules/react-dom/cjs/react-dom.development.js:17527:7)
+      at setPending (app/admin/page.tsx:103:7)
+
+    console.error
+      Warning: An update to AdminPage inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at 
+https://reactjs.org/link/wrap-tests-with-act
+          at AdminPage (C:\Users\akhil\OneDrive\Desktop\Exam_craft_ai\frontend\app\admin\page.tsx:85:33)
+
+    [0m [90m 102 |[39m       setUsers(u[33m.[39musers)[33m;[39m
+     [90m 103 |[39m       setPending(p[33m.[39musers)[33m;[39m
+    [31m[1m>[22m[39m[90m 104 |[39m       setAuditLogs(a[33m.[39maudit_logs)[33m;[39m
+     [90m     |[39m       [31m[1m^[22m[39m
+     [90m 105 |[39m     } [36mcatch[39m (err) {
+     [90m 106 |[39m       setError(err [36minstanceof[39m [33mError[39m [33m?[39m err[33m.[39mmessage [33m:[39m 
+[32m'Failed to load admin data.'[39m)[33m;[39m
+     [90m 107 |[39m     } [36mfinally[39m {[0m
+
+      at printWarning (node_modules/react-dom/cjs/react-dom.development.js:86:30)
+      at error (node_modules/react-dom/cjs/react-dom.development.js:60:7)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-dom/cjs/react-dom.development.js:27589:9)
+      at scheduleUpdateOnFiber (node_modules/react-dom/cjs/react-dom.development.js:25508:5)
+      at dispatchSetState (node_modules/react-dom/cjs/react-dom.development.js:17527:7)
+      at setAuditLogs (app/admin/page.tsx:104:7)
+
+    console.error
+      Warning: An update to AdminPage inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at 
+https://reactjs.org/link/wrap-tests-with-act
+          at AdminPage (C:\Users\akhil\OneDrive\Desktop\Exam_craft_ai\frontend\app\admin\page.tsx:85:33)
+
+    [0m [90m 106 |[39m       setError(err [36minstanceof[39m [33mError[39m [33m?[39m err[33m.[39mmessage [33m:[39m 
+[32m'Failed to load admin data.'[39m)[33m;[39m
+     [90m 107 |[39m     } [36mfinally[39m {
+    [31m[1m>[22m[39m[90m 108 |[39m       setLoading([36mfalse[39m)[33m;[39m
+     [90m     |[39m       [31m[1m^[22m[39m
+     [90m 109 |[39m     }
+     [90m 110 |[39m   }
+     [90m 111 |[39m[0m
+
+      at printWarning (node_modules/react-dom/cjs/react-dom.development.js:86:30)
+      at error (node_modules/react-dom/cjs/react-dom.development.js:60:7)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-dom/cjs/react-dom.development.js:27589:9)
+      at scheduleUpdateOnFiber (node_modules/react-dom/cjs/react-dom.development.js:25508:5)
+      at dispatchSetState (node_modules/react-dom/cjs/react-dom.development.js:17527:7)
+      at setLoading (app/admin/page.tsx:108:7)
+
+    console.error
+      Warning: An update to AdminPage inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at 
+https://reactjs.org/link/wrap-tests-with-act
+          at AdminPage (C:\Users\akhil\OneDrive\Desktop\Exam_craft_ai\frontend\app\admin\page.tsx:85:33)
+
+    [0m [90m 100 |[39m     [36mtry[39m {
+     [90m 101 |[39m       [36mconst[39m [u[33m,[39m p[33m,[39m a] [33m=[39m [36mawait[39m 
+[33mPromise[39m[33m.[39mall([listAdminUsers()[33m,[39m listPendingFaculty()[33m,[39m listAuditLogs()])[33m;[39m
+    [31m[1m>[22m[39m[90m 102 |[39m       setUsers(u[33m.[39musers)[33m;[39m
+     [90m     |[39m       [31m[1m^[22m[39m
+     [90m 103 |[39m       setPending(p[33m.[39musers)[33m;[39m
+     [90m 104 |[39m       setAuditLogs(a[33m.[39maudit_logs)[33m;[39m
+     [90m 105 |[39m     } [36mcatch[39m (err) {[0m
+
+      at printWarning (node_modules/react-dom/cjs/react-dom.development.js:86:30)
+      at error (node_modules/react-dom/cjs/react-dom.development.js:60:7)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-dom/cjs/react-dom.development.js:27589:9)
+      at scheduleUpdateOnFiber (node_modules/react-dom/cjs/react-dom.development.js:25508:5)
+      at dispatchSetState (node_modules/react-dom/cjs/react-dom.development.js:17527:7)
+      at setUsers (app/admin/page.tsx:102:7)
+
+    console.error
+      Warning: An update to AdminPage inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at 
+https://reactjs.org/link/wrap-tests-with-act
+          at AdminPage (C:\Users\akhil\OneDrive\Desktop\Exam_craft_ai\frontend\app\admin\page.tsx:85:33)
+
+    [0m [90m 101 |[39m       [36mconst[39m [u[33m,[39m p[33m,[39m a] [33m=[39m [36mawait[39m 
+[33mPromise[39m[33m.[39mall([listAdminUsers()[33m,[39m listPendingFaculty()[33m,[39m listAuditLogs()])[33m;[39m
+     [90m 102 |[39m       setUsers(u[33m.[39musers)[33m;[39m
+    [31m[1m>[22m[39m[90m 103 |[39m       setPending(p[33m.[39musers)[33m;[39m
+     [90m     |[39m       [31m[1m^[22m[39m
+     [90m 104 |[39m       setAuditLogs(a[33m.[39maudit_logs)[33m;[39m
+     [90m 105 |[39m     } [36mcatch[39m (err) {
+     [90m 106 |[39m       setError(err [36minstanceof[39m [33mError[39m [33m?[39m err[33m.[39mmessage [33m:[39m 
+[32m'Failed to load admin data.'[39m)[33m;[39m[0m
+
+      at printWarning (node_modules/react-dom/cjs/react-dom.development.js:86:30)
+      at error (node_modules/react-dom/cjs/react-dom.development.js:60:7)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-dom/cjs/react-dom.development.js:27589:9)
+      at scheduleUpdateOnFiber (node_modules/react-dom/cjs/react-dom.development.js:25508:5)
+      at dispatchSetState (node_modules/react-dom/cjs/react-dom.development.js:17527:7)
+      at setPending (app/admin/page.tsx:103:7)
+
+    console.error
+      Warning: An update to AdminPage inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at 
+https://reactjs.org/link/wrap-tests-with-act
+          at AdminPage (C:\Users\akhil\OneDrive\Desktop\Exam_craft_ai\frontend\app\admin\page.tsx:85:33)
+
+    [0m [90m 102 |[39m       setUsers(u[33m.[39musers)[33m;[39m
+     [90m 103 |[39m       setPending(p[33m.[39musers)[33m;[39m
+    [31m[1m>[22m[39m[90m 104 |[39m       setAuditLogs(a[33m.[39maudit_logs)[33m;[39m
+     [90m     |[39m       [31m[1m^[22m[39m
+     [90m 105 |[39m     } [36mcatch[39m (err) {
+     [90m 106 |[39m       setError(err [36minstanceof[39m [33mError[39m [33m?[39m err[33m.[39mmessage [33m:[39m 
+[32m'Failed to load admin data.'[39m)[33m;[39m
+     [90m 107 |[39m     } [36mfinally[39m {[0m
+
+      at printWarning (node_modules/react-dom/cjs/react-dom.development.js:86:30)
+      at error (node_modules/react-dom/cjs/react-dom.development.js:60:7)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-dom/cjs/react-dom.development.js:27589:9)
+      at scheduleUpdateOnFiber (node_modules/react-dom/cjs/react-dom.development.js:25508:5)
+      at dispatchSetState (node_modules/react-dom/cjs/react-dom.development.js:17527:7)
+      at setAuditLogs (app/admin/page.tsx:104:7)
+
+    console.error
+      Warning: An update to AdminPage inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at 
+https://reactjs.org/link/wrap-tests-with-act
+          at AdminPage (C:\Users\akhil\OneDrive\Desktop\Exam_craft_ai\frontend\app\admin\page.tsx:85:33)
+
+    [0m [90m 106 |[39m       setError(err [36minstanceof[39m [33mError[39m [33m?[39m err[33m.[39mmessage [33m:[39m 
+[32m'Failed to load admin data.'[39m)[33m;[39m
+     [90m 107 |[39m     } [36mfinally[39m {
+    [31m[1m>[22m[39m[90m 108 |[39m       setLoading([36mfalse[39m)[33m;[39m
+     [90m     |[39m       [31m[1m^[22m[39m
+     [90m 109 |[39m     }
+     [90m 110 |[39m   }
+     [90m 111 |[39m[0m
+
+      at printWarning (node_modules/react-dom/cjs/react-dom.development.js:86:30)
+      at error (node_modules/react-dom/cjs/react-dom.development.js:60:7)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-dom/cjs/react-dom.development.js:27589:9)
+      at scheduleUpdateOnFiber (node_modules/react-dom/cjs/react-dom.development.js:25508:5)
+      at dispatchSetState (node_modules/react-dom/cjs/react-dom.development.js:17527:7)
+      at setLoading (app/admin/page.tsx:108:7)
+
+    console.error
+      Warning: An update to AdminPage inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at 
+https://reactjs.org/link/wrap-tests-with-act
+          at AdminPage (C:\Users\akhil\OneDrive\Desktop\Exam_craft_ai\frontend\app\admin\page.tsx:85:33)
+
+    [0m [90m 100 |[39m     [36mtry[39m {
+     [90m 101 |[39m       [36mconst[39m [u[33m,[39m p[33m,[39m a] [33m=[39m [36mawait[39m 
+[33mPromise[39m[33m.[39mall([listAdminUsers()[33m,[39m listPendingFaculty()[33m,[39m listAuditLogs()])[33m;[39m
+    [31m[1m>[22m[39m[90m 102 |[39m       setUsers(u[33m.[39musers)[33m;[39m
+     [90m     |[39m       [31m[1m^[22m[39m
+     [90m 103 |[39m       setPending(p[33m.[39musers)[33m;[39m
+     [90m 104 |[39m       setAuditLogs(a[33m.[39maudit_logs)[33m;[39m
+     [90m 105 |[39m     } [36mcatch[39m (err) {[0m
+
+      at printWarning (node_modules/react-dom/cjs/react-dom.development.js:86:30)
+      at error (node_modules/react-dom/cjs/react-dom.development.js:60:7)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-dom/cjs/react-dom.development.js:27589:9)
+      at scheduleUpdateOnFiber (node_modules/react-dom/cjs/react-dom.development.js:25508:5)
+      at dispatchSetState (node_modules/react-dom/cjs/react-dom.development.js:17527:7)
+      at setUsers (app/admin/page.tsx:102:7)
+
+    console.error
+      Warning: An update to AdminPage inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at 
+https://reactjs.org/link/wrap-tests-with-act
+          at AdminPage (C:\Users\akhil\OneDrive\Desktop\Exam_craft_ai\frontend\app\admin\page.tsx:85:33)
+
+    [0m [90m 101 |[39m       [36mconst[39m [u[33m,[39m p[33m,[39m a] [33m=[39m [36mawait[39m 
+[33mPromise[39m[33m.[39mall([listAdminUsers()[33m,[39m listPendingFaculty()[33m,[39m listAuditLogs()])[33m;[39m
+     [90m 102 |[39m       setUsers(u[33m.[39musers)[33m;[39m
+    [31m[1m>[22m[39m[90m 103 |[39m       setPending(p[33m.[39musers)[33m;[39m
+     [90m     |[39m       [31m[1m^[22m[39m
+     [90m 104 |[39m       setAuditLogs(a[33m.[39maudit_logs)[33m;[39m
+     [90m 105 |[39m     } [36mcatch[39m (err) {
+     [90m 106 |[39m       setError(err [36minstanceof[39m [33mError[39m [33m?[39m err[33m.[39mmessage [33m:[39m 
+[32m'Failed to load admin data.'[39m)[33m;[39m[0m
+
+      at printWarning (node_modules/react-dom/cjs/react-dom.development.js:86:30)
+      at error (node_modules/react-dom/cjs/react-dom.development.js:60:7)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-dom/cjs/react-dom.development.js:27589:9)
+      at scheduleUpdateOnFiber (node_modules/react-dom/cjs/react-dom.development.js:25508:5)
+      at dispatchSetState (node_modules/react-dom/cjs/react-dom.development.js:17527:7)
+      at setPending (app/admin/page.tsx:103:7)
+
+    console.error
+      Warning: An update to AdminPage inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at 
+https://reactjs.org/link/wrap-tests-with-act
+          at AdminPage (C:\Users\akhil\OneDrive\Desktop\Exam_craft_ai\frontend\app\admin\page.tsx:85:33)
+
+    [0m [90m 102 |[39m       setUsers(u[33m.[39musers)[33m;[39m
+     [90m 103 |[39m       setPending(p[33m.[39musers)[33m;[39m
+    [31m[1m>[22m[39m[90m 104 |[39m       setAuditLogs(a[33m.[39maudit_logs)[33m;[39m
+     [90m     |[39m       [31m[1m^[22m[39m
+     [90m 105 |[39m     } [36mcatch[39m (err) {
+     [90m 106 |[39m       setError(err [36minstanceof[39m [33mError[39m [33m?[39m err[33m.[39mmessage [33m:[39m 
+[32m'Failed to load admin data.'[39m)[33m;[39m
+     [90m 107 |[39m     } [36mfinally[39m {[0m
+
+      at printWarning (node_modules/react-dom/cjs/react-dom.development.js:86:30)
+      at error (node_modules/react-dom/cjs/react-dom.development.js:60:7)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-dom/cjs/react-dom.development.js:27589:9)
+      at scheduleUpdateOnFiber (node_modules/react-dom/cjs/react-dom.development.js:25508:5)
+      at dispatchSetState (node_modules/react-dom/cjs/react-dom.development.js:17527:7)
+      at setAuditLogs (app/admin/page.tsx:104:7)
+
+    console.error
+      Warning: An update to AdminPage inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at 
+https://reactjs.org/link/wrap-tests-with-act
+          at AdminPage (C:\Users\akhil\OneDrive\Desktop\Exam_craft_ai\frontend\app\admin\page.tsx:85:33)
+
+    [0m [90m 106 |[39m       setError(err [36minstanceof[39m [33mError[39m [33m?[39m err[33m.[39mmessage [33m:[39m 
+[32m'Failed to load admin data.'[39m)[33m;[39m
+     [90m 107 |[39m     } [36mfinally[39m {
+    [31m[1m>[22m[39m[90m 108 |[39m       setLoading([36mfalse[39m)[33m;[39m
+     [90m     |[39m       [31m[1m^[22m[39m
+     [90m 109 |[39m     }
+     [90m 110 |[39m   }
+     [90m 111 |[39m[0m
+
+      at printWarning (node_modules/react-dom/cjs/react-dom.development.js:86:30)
+      at error (node_modules/react-dom/cjs/react-dom.development.js:60:7)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-dom/cjs/react-dom.development.js:27589:9)
+      at scheduleUpdateOnFiber (node_modules/react-dom/cjs/react-dom.development.js:25508:5)
+      at dispatchSetState (node_modules/react-dom/cjs/react-dom.development.js:17527:7)
+      at setLoading (app/admin/page.tsx:108:7)
+
+    console.error
+      Warning: An update to AdminPage inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at 
+https://reactjs.org/link/wrap-tests-with-act
+          at AdminPage (C:\Users\akhil\OneDrive\Desktop\Exam_craft_ai\frontend\app\admin\page.tsx:85:33)
+
+    [0m [90m 100 |[39m     [36mtry[39m {
+     [90m 101 |[39m       [36mconst[39m [u[33m,[39m p[33m,[39m a] [33m=[39m [36mawait[39m 
+[33mPromise[39m[33m.[39mall([listAdminUsers()[33m,[39m listPendingFaculty()[33m,[39m listAuditLogs()])[33m;[39m
+    [31m[1m>[22m[39m[90m 102 |[39m       setUsers(u[33m.[39musers)[33m;[39m
+     [90m     |[39m       [31m[1m^[22m[39m
+     [90m 103 |[39m       setPending(p[33m.[39musers)[33m;[39m
+     [90m 104 |[39m       setAuditLogs(a[33m.[39maudit_logs)[33m;[39m
+     [90m 105 |[39m     } [36mcatch[39m (err) {[0m
+
+      at printWarning (node_modules/react-dom/cjs/react-dom.development.js:86:30)
+      at error (node_modules/react-dom/cjs/react-dom.development.js:60:7)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-dom/cjs/react-dom.development.js:27589:9)
+      at scheduleUpdateOnFiber (node_modules/react-dom/cjs/react-dom.development.js:25508:5)
+      at dispatchSetState (node_modules/react-dom/cjs/react-dom.development.js:17527:7)
+      at setUsers (app/admin/page.tsx:102:7)
+
+    console.error
+      Warning: An update to AdminPage inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at 
+https://reactjs.org/link/wrap-tests-with-act
+          at AdminPage (C:\Users\akhil\OneDrive\Desktop\Exam_craft_ai\frontend\app\admin\page.tsx:85:33)
+
+    [0m [90m 101 |[39m       [36mconst[39m [u[33m,[39m p[33m,[39m a] [33m=[39m [36mawait[39m 
+[33mPromise[39m[33m.[39mall([listAdminUsers()[33m,[39m listPendingFaculty()[33m,[39m listAuditLogs()])[33m;[39m
+     [90m 102 |[39m       setUsers(u[33m.[39musers)[33m;[39m
+    [31m[1m>[22m[39m[90m 103 |[39m       setPending(p[33m.[39musers)[33m;[39m
+     [90m     |[39m       [31m[1m^[22m[39m
+     [90m 104 |[39m       setAuditLogs(a[33m.[39maudit_logs)[33m;[39m
+     [90m 105 |[39m     } [36mcatch[39m (err) {
+     [90m 106 |[39m       setError(err [36minstanceof[39m [33mError[39m [33m?[39m err[33m.[39mmessage [33m:[39m 
+[32m'Failed to load admin data.'[39m)[33m;[39m[0m
+
+      at printWarning (node_modules/react-dom/cjs/react-dom.development.js:86:30)
+      at error (node_modules/react-dom/cjs/react-dom.development.js:60:7)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-dom/cjs/react-dom.development.js:27589:9)
+      at scheduleUpdateOnFiber (node_modules/react-dom/cjs/react-dom.development.js:25508:5)
+      at dispatchSetState (node_modules/react-dom/cjs/react-dom.development.js:17527:7)
+      at setPending (app/admin/page.tsx:103:7)
+
+    console.error
+      Warning: An update to AdminPage inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at 
+https://reactjs.org/link/wrap-tests-with-act
+          at AdminPage (C:\Users\akhil\OneDrive\Desktop\Exam_craft_ai\frontend\app\admin\page.tsx:85:33)
+
+    [0m [90m 102 |[39m       setUsers(u[33m.[39musers)[33m;[39m
+     [90m 103 |[39m       setPending(p[33m.[39musers)[33m;[39m
+    [31m[1m>[22m[39m[90m 104 |[39m       setAuditLogs(a[33m.[39maudit_logs)[33m;[39m
+     [90m     |[39m       [31m[1m^[22m[39m
+     [90m 105 |[39m     } [36mcatch[39m (err) {
+     [90m 106 |[39m       setError(err [36minstanceof[39m [33mError[39m [33m?[39m err[33m.[39mmessage [33m:[39m 
+[32m'Failed to load admin data.'[39m)[33m;[39m
+     [90m 107 |[39m     } [36mfinally[39m {[0m
+
+      at printWarning (node_modules/react-dom/cjs/react-dom.development.js:86:30)
+      at error (node_modules/react-dom/cjs/react-dom.development.js:60:7)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-dom/cjs/react-dom.development.js:27589:9)
+      at scheduleUpdateOnFiber (node_modules/react-dom/cjs/react-dom.development.js:25508:5)
+      at dispatchSetState (node_modules/react-dom/cjs/react-dom.development.js:17527:7)
+      at setAuditLogs (app/admin/page.tsx:104:7)
+
+    console.error
+      Warning: An update to AdminPage inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at 
+https://reactjs.org/link/wrap-tests-with-act
+          at AdminPage (C:\Users\akhil\OneDrive\Desktop\Exam_craft_ai\frontend\app\admin\page.tsx:85:33)
+
+    [0m [90m 106 |[39m       setError(err [36minstanceof[39m [33mError[39m [33m?[39m err[33m.[39mmessage [33m:[39m 
+[32m'Failed to load admin data.'[39m)[33m;[39m
+     [90m 107 |[39m     } [36mfinally[39m {
+    [31m[1m>[22m[39m[90m 108 |[39m       setLoading([36mfalse[39m)[33m;[39m
+     [90m     |[39m       [31m[1m^[22m[39m
+     [90m 109 |[39m     }
+     [90m 110 |[39m   }
+     [90m 111 |[39m[0m
+
+      at printWarning (node_modules/react-dom/cjs/react-dom.development.js:86:30)
+      at error (node_modules/react-dom/cjs/react-dom.development.js:60:7)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-dom/cjs/react-dom.development.js:27589:9)
+      at scheduleUpdateOnFiber (node_modules/react-dom/cjs/react-dom.development.js:25508:5)
+      at dispatchSetState (node_modules/react-dom/cjs/react-dom.development.js:17527:7)
+      at setLoading (app/admin/page.tsx:108:7)
+
+PASS __tests__/admin-people-access.test.tsx (17.795 s)
+  ΓùÅ Console
+
+    console.error
+      Warning: An update to AdminPage inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at 
+https://reactjs.org/link/wrap-tests-with-act
+          at AdminPage (C:\Users\akhil\OneDrive\Desktop\Exam_craft_ai\frontend\app\admin\page.tsx:85:33)
+
+    [0m [90m 100 |[39m     [36mtry[39m {
+     [90m 101 |[39m       [36mconst[39m [u[33m,[39m p[33m,[39m a] [33m=[39m [36mawait[39m 
+[33mPromise[39m[33m.[39mall([listAdminUsers()[33m,[39m listPendingFaculty()[33m,[39m listAuditLogs()])[33m;[39m
+    [31m[1m>[22m[39m[90m 102 |[39m       setUsers(u[33m.[39musers)[33m;[39m
+     [90m     |[39m       [31m[1m^[22m[39m
+     [90m 103 |[39m       setPending(p[33m.[39musers)[33m;[39m
+     [90m 104 |[39m       setAuditLogs(a[33m.[39maudit_logs)[33m;[39m
+     [90m 105 |[39m     } [36mcatch[39m (err) {[0m
+
+      at printWarning (node_modules/react-dom/cjs/react-dom.development.js:86:30)
+      at error (node_modules/react-dom/cjs/react-dom.development.js:60:7)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-dom/cjs/react-dom.development.js:27589:9)
+      at scheduleUpdateOnFiber (node_modules/react-dom/cjs/react-dom.development.js:25508:5)
+      at dispatchSetState (node_modules/react-dom/cjs/react-dom.development.js:17527:7)
+      at setUsers (app/admin/page.tsx:102:7)
+
+    console.error
+      Warning: An update to AdminPage inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at 
+https://reactjs.org/link/wrap-tests-with-act
+          at AdminPage (C:\Users\akhil\OneDrive\Desktop\Exam_craft_ai\frontend\app\admin\page.tsx:85:33)
+
+    [0m [90m 101 |[39m       [36mconst[39m [u[33m,[39m p[33m,[39m a] [33m=[39m [36mawait[39m 
+[33mPromise[39m[33m.[39mall([listAdminUsers()[33m,[39m listPendingFaculty()[33m,[39m listAuditLogs()])[33m;[39m
+     [90m 102 |[39m       setUsers(u[33m.[39musers)[33m;[39m
+    [31m[1m>[22m[39m[90m 103 |[39m       setPending(p[33m.[39musers)[33m;[39m
+     [90m     |[39m       [31m[1m^[22m[39m
+     [90m 104 |[39m       setAuditLogs(a[33m.[39maudit_logs)[33m;[39m
+     [90m 105 |[39m     } [36mcatch[39m (err) {
+     [90m 106 |[39m       setError(err [36minstanceof[39m [33mError[39m [33m?[39m err[33m.[39mmessage [33m:[39m 
+[32m'Failed to load admin data.'[39m)[33m;[39m[0m
+
+      at printWarning (node_modules/react-dom/cjs/react-dom.development.js:86:30)
+      at error (node_modules/react-dom/cjs/react-dom.development.js:60:7)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-dom/cjs/react-dom.development.js:27589:9)
+      at scheduleUpdateOnFiber (node_modules/react-dom/cjs/react-dom.development.js:25508:5)
+      at dispatchSetState (node_modules/react-dom/cjs/react-dom.development.js:17527:7)
+      at setPending (app/admin/page.tsx:103:7)
+
+    console.error
+      Warning: An update to AdminPage inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at 
+https://reactjs.org/link/wrap-tests-with-act
+          at AdminPage (C:\Users\akhil\OneDrive\Desktop\Exam_craft_ai\frontend\app\admin\page.tsx:85:33)
+
+    [0m [90m 102 |[39m       setUsers(u[33m.[39musers)[33m;[39m
+     [90m 103 |[39m       setPending(p[33m.[39musers)[33m;[39m
+    [31m[1m>[22m[39m[90m 104 |[39m       setAuditLogs(a[33m.[39maudit_logs)[33m;[39m
+     [90m     |[39m       [31m[1m^[22m[39m
+     [90m 105 |[39m     } [36mcatch[39m (err) {
+     [90m 106 |[39m       setError(err [36minstanceof[39m [33mError[39m [33m?[39m err[33m.[39mmessage [33m:[39m 
+[32m'Failed to load admin data.'[39m)[33m;[39m
+     [90m 107 |[39m     } [36mfinally[39m {[0m
+
+      at printWarning (node_modules/react-dom/cjs/react-dom.development.js:86:30)
+      at error (node_modules/react-dom/cjs/react-dom.development.js:60:7)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-dom/cjs/react-dom.development.js:27589:9)
+      at scheduleUpdateOnFiber (node_modules/react-dom/cjs/react-dom.development.js:25508:5)
+      at dispatchSetState (node_modules/react-dom/cjs/react-dom.development.js:17527:7)
+      at setAuditLogs (app/admin/page.tsx:104:7)
+
+    console.error
+      Warning: An update to AdminPage inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at 
+https://reactjs.org/link/wrap-tests-with-act
+          at AdminPage (C:\Users\akhil\OneDrive\Desktop\Exam_craft_ai\frontend\app\admin\page.tsx:85:33)
+
+    [0m [90m 106 |[39m       setError(err [36minstanceof[39m [33mError[39m [33m?[39m err[33m.[39mmessage [33m:[39m 
+[32m'Failed to load admin data.'[39m)[33m;[39m
+     [90m 107 |[39m     } [36mfinally[39m {
+    [31m[1m>[22m[39m[90m 108 |[39m       setLoading([36mfalse[39m)[33m;[39m
+     [90m     |[39m       [31m[1m^[22m[39m
+     [90m 109 |[39m     }
+     [90m 110 |[39m   }
+     [90m 111 |[39m[0m
+
+      at printWarning (node_modules/react-dom/cjs/react-dom.development.js:86:30)
+      at error (node_modules/react-dom/cjs/react-dom.development.js:60:7)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-dom/cjs/react-dom.development.js:27589:9)
+      at scheduleUpdateOnFiber (node_modules/react-dom/cjs/react-dom.development.js:25508:5)
+      at dispatchSetState (node_modules/react-dom/cjs/react-dom.development.js:17527:7)
+      at setLoading (app/admin/page.tsx:108:7)
+
+    console.error
+      Warning: An update to AdminPage inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at 
+https://reactjs.org/link/wrap-tests-with-act
+          at AdminPage (C:\Users\akhil\OneDrive\Desktop\Exam_craft_ai\frontend\app\admin\page.tsx:85:33)
+
+    [0m [90m 100 |[39m     [36mtry[39m {
+     [90m 101 |[39m       [36mconst[39m [u[33m,[39m p[33m,[39m a] [33m=[39m [36mawait[39m 
+[33mPromise[39m[33m.[39mall([listAdminUsers()[33m,[39m listPendingFaculty()[33m,[39m listAuditLogs()])[33m;[39m
+    [31m[1m>[22m[39m[90m 102 |[39m       setUsers(u[33m.[39musers)[33m;[39m
+     [90m     |[39m       [31m[1m^[22m[39m
+     [90m 103 |[39m       setPending(p[33m.[39musers)[33m;[39m
+     [90m 104 |[39m       setAuditLogs(a[33m.[39maudit_logs)[33m;[39m
+     [90m 105 |[39m     } [36mcatch[39m (err) {[0m
+
+      at printWarning (node_modules/react-dom/cjs/react-dom.development.js:86:30)
+      at error (node_modules/react-dom/cjs/react-dom.development.js:60:7)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-dom/cjs/react-dom.development.js:27589:9)
+      at scheduleUpdateOnFiber (node_modules/react-dom/cjs/react-dom.development.js:25508:5)
+      at dispatchSetState (node_modules/react-dom/cjs/react-dom.development.js:17527:7)
+      at setUsers (app/admin/page.tsx:102:7)
+
+    console.error
+      Warning: An update to AdminPage inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at 
+https://reactjs.org/link/wrap-tests-with-act
+          at AdminPage (C:\Users\akhil\OneDrive\Desktop\Exam_craft_ai\frontend\app\admin\page.tsx:85:33)
+
+    [0m [90m 101 |[39m       [36mconst[39m [u[33m,[39m p[33m,[39m a] [33m=[39m [36mawait[39m 
+[33mPromise[39m[33m.[39mall([listAdminUsers()[33m,[39m listPendingFaculty()[33m,[39m listAuditLogs()])[33m;[39m
+     [90m 102 |[39m       setUsers(u[33m.[39musers)[33m;[39m
+    [31m[1m>[22m[39m[90m 103 |[39m       setPending(p[33m.[39musers)[33m;[39m
+     [90m     |[39m       [31m[1m^[22m[39m
+     [90m 104 |[39m       setAuditLogs(a[33m.[39maudit_logs)[33m;[39m
+     [90m 105 |[39m     } [36mcatch[39m (err) {
+     [90m 106 |[39m       setError(err [36minstanceof[39m [33mError[39m [33m?[39m err[33m.[39mmessage [33m:[39m 
+[32m'Failed to load admin data.'[39m)[33m;[39m[0m
+
+      at printWarning (node_modules/react-dom/cjs/react-dom.development.js:86:30)
+      at error (node_modules/react-dom/cjs/react-dom.development.js:60:7)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-dom/cjs/react-dom.development.js:27589:9)
+      at scheduleUpdateOnFiber (node_modules/react-dom/cjs/react-dom.development.js:25508:5)
+      at dispatchSetState (node_modules/react-dom/cjs/react-dom.development.js:17527:7)
+      at setPending (app/admin/page.tsx:103:7)
+
+    console.error
+      Warning: An update to AdminPage inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at 
+https://reactjs.org/link/wrap-tests-with-act
+          at AdminPage (C:\Users\akhil\OneDrive\Desktop\Exam_craft_ai\frontend\app\admin\page.tsx:85:33)
+
+    [0m [90m 102 |[39m       setUsers(u[33m.[39musers)[33m;[39m
+     [90m 103 |[39m       setPending(p[33m.[39musers)[33m;[39m
+    [31m[1m>[22m[39m[90m 104 |[39m       setAuditLogs(a[33m.[39maudit_logs)[33m;[39m
+     [90m     |[39m       [31m[1m^[22m[39m
+     [90m 105 |[39m     } [36mcatch[39m (err) {
+     [90m 106 |[39m       setError(err [36minstanceof[39m [33mError[39m [33m?[39m err[33m.[39mmessage [33m:[39m 
+[32m'Failed to load admin data.'[39m)[33m;[39m
+     [90m 107 |[39m     } [36mfinally[39m {[0m
+
+      at printWarning (node_modules/react-dom/cjs/react-dom.development.js:86:30)
+      at error (node_modules/react-dom/cjs/react-dom.development.js:60:7)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-dom/cjs/react-dom.development.js:27589:9)
+      at scheduleUpdateOnFiber (node_modules/react-dom/cjs/react-dom.development.js:25508:5)
+      at dispatchSetState (node_modules/react-dom/cjs/react-dom.development.js:17527:7)
+      at setAuditLogs (app/admin/page.tsx:104:7)
+
+    console.error
+      Warning: An update to AdminPage inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at 
+https://reactjs.org/link/wrap-tests-with-act
+          at AdminPage (C:\Users\akhil\OneDrive\Desktop\Exam_craft_ai\frontend\app\admin\page.tsx:85:33)
+
+    [0m [90m 106 |[39m       setError(err [36minstanceof[39m [33mError[39m [33m?[39m err[33m.[39mmessage [33m:[39m 
+[32m'Failed to load admin data.'[39m)[33m;[39m
+     [90m 107 |[39m     } [36mfinally[39m {
+    [31m[1m>[22m[39m[90m 108 |[39m       setLoading([36mfalse[39m)[33m;[39m
+     [90m     |[39m       [31m[1m^[22m[39m
+     [90m 109 |[39m     }
+     [90m 110 |[39m   }
+     [90m 111 |[39m[0m
+
+      at printWarning (node_modules/react-dom/cjs/react-dom.development.js:86:30)
+      at error (node_modules/react-dom/cjs/react-dom.development.js:60:7)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-dom/cjs/react-dom.development.js:27589:9)
+      at scheduleUpdateOnFiber (node_modules/react-dom/cjs/react-dom.development.js:25508:5)
+      at dispatchSetState (node_modules/react-dom/cjs/react-dom.development.js:17527:7)
+      at setLoading (app/admin/page.tsx:108:7)
+
+    console.error
+      Warning: An update to AdminPage inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at 
+https://reactjs.org/link/wrap-tests-with-act
+          at AdminPage (C:\Users\akhil\OneDrive\Desktop\Exam_craft_ai\frontend\app\admin\page.tsx:85:33)
+
+    [0m [90m 100 |[39m     [36mtry[39m {
+     [90m 101 |[39m       [36mconst[39m [u[33m,[39m p[33m,[39m a] [33m=[39m [36mawait[39m 
+[33mPromise[39m[33m.[39mall([listAdminUsers()[33m,[39m listPendingFaculty()[33m,[39m listAuditLogs()])[33m;[39m
+    [31m[1m>[22m[39m[90m 102 |[39m       setUsers(u[33m.[39musers)[33m;[39m
+     [90m     |[39m       [31m[1m^[22m[39m
+     [90m 103 |[39m       setPending(p[33m.[39musers)[33m;[39m
+     [90m 104 |[39m       setAuditLogs(a[33m.[39maudit_logs)[33m;[39m
+     [90m 105 |[39m     } [36mcatch[39m (err) {[0m
+
+      at printWarning (node_modules/react-dom/cjs/react-dom.development.js:86:30)
+      at error (node_modules/react-dom/cjs/react-dom.development.js:60:7)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-dom/cjs/react-dom.development.js:27589:9)
+      at scheduleUpdateOnFiber (node_modules/react-dom/cjs/react-dom.development.js:25508:5)
+      at dispatchSetState (node_modules/react-dom/cjs/react-dom.development.js:17527:7)
+      at setUsers (app/admin/page.tsx:102:7)
+
+    console.error
+      Warning: An update to AdminPage inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at 
+https://reactjs.org/link/wrap-tests-with-act
+          at AdminPage (C:\Users\akhil\OneDrive\Desktop\Exam_craft_ai\frontend\app\admin\page.tsx:85:33)
+
+    [0m [90m 101 |[39m       [36mconst[39m [u[33m,[39m p[33m,[39m a] [33m=[39m [36mawait[39m 
+[33mPromise[39m[33m.[39mall([listAdminUsers()[33m,[39m listPendingFaculty()[33m,[39m listAuditLogs()])[33m;[39m
+     [90m 102 |[39m       setUsers(u[33m.[39musers)[33m;[39m
+    [31m[1m>[22m[39m[90m 103 |[39m       setPending(p[33m.[39musers)[33m;[39m
+     [90m     |[39m       [31m[1m^[22m[39m
+     [90m 104 |[39m       setAuditLogs(a[33m.[39maudit_logs)[33m;[39m
+     [90m 105 |[39m     } [36mcatch[39m (err) {
+     [90m 106 |[39m       setError(err [36minstanceof[39m [33mError[39m [33m?[39m err[33m.[39mmessage [33m:[39m 
+[32m'Failed to load admin data.'[39m)[33m;[39m[0m
+
+      at printWarning (node_modules/react-dom/cjs/react-dom.development.js:86:30)
+      at error (node_modules/react-dom/cjs/react-dom.development.js:60:7)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-dom/cjs/react-dom.development.js:27589:9)
+      at scheduleUpdateOnFiber (node_modules/react-dom/cjs/react-dom.development.js:25508:5)
+      at dispatchSetState (node_modules/react-dom/cjs/react-dom.development.js:17527:7)
+      at setPending (app/admin/page.tsx:103:7)
+
+    console.error
+      Warning: An update to AdminPage inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at 
+https://reactjs.org/link/wrap-tests-with-act
+          at AdminPage (C:\Users\akhil\OneDrive\Desktop\Exam_craft_ai\frontend\app\admin\page.tsx:85:33)
+
+    [0m [90m 102 |[39m       setUsers(u[33m.[39musers)[33m;[39m
+     [90m 103 |[39m       setPending(p[33m.[39musers)[33m;[39m
+    [31m[1m>[22m[39m[90m 104 |[39m       setAuditLogs(a[33m.[39maudit_logs)[33m;[39m
+     [90m     |[39m       [31m[1m^[22m[39m
+     [90m 105 |[39m     } [36mcatch[39m (err) {
+     [90m 106 |[39m       setError(err [36minstanceof[39m [33mError[39m [33m?[39m err[33m.[39mmessage [33m:[39m 
+[32m'Failed to load admin data.'[39m)[33m;[39m
+     [90m 107 |[39m     } [36mfinally[39m {[0m
+
+      at printWarning (node_modules/react-dom/cjs/react-dom.development.js:86:30)
+      at error (node_modules/react-dom/cjs/react-dom.development.js:60:7)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-dom/cjs/react-dom.development.js:27589:9)
+      at scheduleUpdateOnFiber (node_modules/react-dom/cjs/react-dom.development.js:25508:5)
+      at dispatchSetState (node_modules/react-dom/cjs/react-dom.development.js:17527:7)
+      at setAuditLogs (app/admin/page.tsx:104:7)
+
+    console.error
+      Warning: An update to AdminPage inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at 
+https://reactjs.org/link/wrap-tests-with-act
+          at AdminPage (C:\Users\akhil\OneDrive\Desktop\Exam_craft_ai\frontend\app\admin\page.tsx:85:33)
+
+    [0m [90m 106 |[39m       setError(err [36minstanceof[39m [33mError[39m [33m?[39m err[33m.[39mmessage [33m:[39m 
+[32m'Failed to load admin data.'[39m)[33m;[39m
+     [90m 107 |[39m     } [36mfinally[39m {
+    [31m[1m>[22m[39m[90m 108 |[39m       setLoading([36mfalse[39m)[33m;[39m
+     [90m     |[39m       [31m[1m^[22m[39m
+     [90m 109 |[39m     }
+     [90m 110 |[39m   }
+     [90m 111 |[39m[0m
+
+      at printWarning (node_modules/react-dom/cjs/react-dom.development.js:86:30)
+      at error (node_modules/react-dom/cjs/react-dom.development.js:60:7)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-dom/cjs/react-dom.development.js:27589:9)
+      at scheduleUpdateOnFiber (node_modules/react-dom/cjs/react-dom.development.js:25508:5)
+      at dispatchSetState (node_modules/react-dom/cjs/react-dom.development.js:17527:7)
+      at setLoading (app/admin/page.tsx:108:7)
+
+    console.error
+      Warning: An update to AdminPage inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at 
+https://reactjs.org/link/wrap-tests-with-act
+          at AdminPage (C:\Users\akhil\OneDrive\Desktop\Exam_craft_ai\frontend\app\admin\page.tsx:85:33)
+
+    [0m [90m 100 |[39m     [36mtry[39m {
+     [90m 101 |[39m       [36mconst[39m [u[33m,[39m p[33m,[39m a] [33m=[39m [36mawait[39m 
+[33mPromise[39m[33m.[39mall([listAdminUsers()[33m,[39m listPendingFaculty()[33m,[39m listAuditLogs()])[33m;[39m
+    [31m[1m>[22m[39m[90m 102 |[39m       setUsers(u[33m.[39musers)[33m;[39m
+     [90m     |[39m       [31m[1m^[22m[39m
+     [90m 103 |[39m       setPending(p[33m.[39musers)[33m;[39m
+     [90m 104 |[39m       setAuditLogs(a[33m.[39maudit_logs)[33m;[39m
+     [90m 105 |[39m     } [36mcatch[39m (err) {[0m
+
+      at printWarning (node_modules/react-dom/cjs/react-dom.development.js:86:30)
+      at error (node_modules/react-dom/cjs/react-dom.development.js:60:7)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-dom/cjs/react-dom.development.js:27589:9)
+      at scheduleUpdateOnFiber (node_modules/react-dom/cjs/react-dom.development.js:25508:5)
+      at dispatchSetState (node_modules/react-dom/cjs/react-dom.development.js:17527:7)
+      at setUsers (app/admin/page.tsx:102:7)
+
+    console.error
+      Warning: An update to AdminPage inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at 
+https://reactjs.org/link/wrap-tests-with-act
+          at AdminPage (C:\Users\akhil\OneDrive\Desktop\Exam_craft_ai\frontend\app\admin\page.tsx:85:33)
+
+    [0m [90m 101 |[39m       [36mconst[39m [u[33m,[39m p[33m,[39m a] [33m=[39m [36mawait[39m 
+[33mPromise[39m[33m.[39mall([listAdminUsers()[33m,[39m listPendingFaculty()[33m,[39m listAuditLogs()])[33m;[39m
+     [90m 102 |[39m       setUsers(u[33m.[39musers)[33m;[39m
+    [31m[1m>[22m[39m[90m 103 |[39m       setPending(p[33m.[39musers)[33m;[39m
+     [90m     |[39m       [31m[1m^[22m[39m
+     [90m 104 |[39m       setAuditLogs(a[33m.[39maudit_logs)[33m;[39m
+     [90m 105 |[39m     } [36mcatch[39m (err) {
+     [90m 106 |[39m       setError(err [36minstanceof[39m [33mError[39m [33m?[39m err[33m.[39mmessage [33m:[39m 
+[32m'Failed to load admin data.'[39m)[33m;[39m[0m
+
+      at printWarning (node_modules/react-dom/cjs/react-dom.development.js:86:30)
+      at error (node_modules/react-dom/cjs/react-dom.development.js:60:7)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-dom/cjs/react-dom.development.js:27589:9)
+      at scheduleUpdateOnFiber (node_modules/react-dom/cjs/react-dom.development.js:25508:5)
+      at dispatchSetState (node_modules/react-dom/cjs/react-dom.development.js:17527:7)
+      at setPending (app/admin/page.tsx:103:7)
+
+    console.error
+      Warning: An update to AdminPage inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at 
+https://reactjs.org/link/wrap-tests-with-act
+          at AdminPage (C:\Users\akhil\OneDrive\Desktop\Exam_craft_ai\frontend\app\admin\page.tsx:85:33)
+
+    [0m [90m 102 |[39m       setUsers(u[33m.[39musers)[33m;[39m
+     [90m 103 |[39m       setPending(p[33m.[39musers)[33m;[39m
+    [31m[1m>[22m[39m[90m 104 |[39m       setAuditLogs(a[33m.[39maudit_logs)[33m;[39m
+     [90m     |[39m       [31m[1m^[22m[39m
+     [90m 105 |[39m     } [36mcatch[39m (err) {
+     [90m 106 |[39m       setError(err [36minstanceof[39m [33mError[39m [33m?[39m err[33m.[39mmessage [33m:[39m 
+[32m'Failed to load admin data.'[39m)[33m;[39m
+     [90m 107 |[39m     } [36mfinally[39m {[0m
+
+      at printWarning (node_modules/react-dom/cjs/react-dom.development.js:86:30)
+      at error (node_modules/react-dom/cjs/react-dom.development.js:60:7)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-dom/cjs/react-dom.development.js:27589:9)
+      at scheduleUpdateOnFiber (node_modules/react-dom/cjs/react-dom.development.js:25508:5)
+      at dispatchSetState (node_modules/react-dom/cjs/react-dom.development.js:17527:7)
+      at setAuditLogs (app/admin/page.tsx:104:7)
+
+    console.error
+      Warning: An update to AdminPage inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at 
+https://reactjs.org/link/wrap-tests-with-act
+          at AdminPage (C:\Users\akhil\OneDrive\Desktop\Exam_craft_ai\frontend\app\admin\page.tsx:85:33)
+
+    [0m [90m 106 |[39m       setError(err [36minstanceof[39m [33mError[39m [33m?[39m err[33m.[39mmessage [33m:[39m 
+[32m'Failed to load admin data.'[39m)[33m;[39m
+     [90m 107 |[39m     } [36mfinally[39m {
+    [31m[1m>[22m[39m[90m 108 |[39m       setLoading([36mfalse[39m)[33m;[39m
+     [90m     |[39m       [31m[1m^[22m[39m
+     [90m 109 |[39m     }
+     [90m 110 |[39m   }
+     [90m 111 |[39m[0m
+
+      at printWarning (node_modules/react-dom/cjs/react-dom.development.js:86:30)
+      at error (node_modules/react-dom/cjs/react-dom.development.js:60:7)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-dom/cjs/react-dom.development.js:27589:9)
+      at scheduleUpdateOnFiber (node_modules/react-dom/cjs/react-dom.development.js:25508:5)
+      at dispatchSetState (node_modules/react-dom/cjs/react-dom.development.js:17527:7)
+      at setLoading (app/admin/page.tsx:108:7)
+
+    console.error
+      Warning: An update to AdminPage inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at 
+https://reactjs.org/link/wrap-tests-with-act
+          at AdminPage (C:\Users\akhil\OneDrive\Desktop\Exam_craft_ai\frontend\app\admin\page.tsx:85:33)
+
+    [0m [90m 100 |[39m     [36mtry[39m {
+     [90m 101 |[39m       [36mconst[39m [u[33m,[39m p[33m,[39m a] [33m=[39m [36mawait[39m 
+[33mPromise[39m[33m.[39mall([listAdminUsers()[33m,[39m listPendingFaculty()[33m,[39m listAuditLogs()])[33m;[39m
+    [31m[1m>[22m[39m[90m 102 |[39m       setUsers(u[33m.[39musers)[33m;[39m
+     [90m     |[39m       [31m[1m^[22m[39m
+     [90m 103 |[39m       setPending(p[33m.[39musers)[33m;[39m
+     [90m 104 |[39m       setAuditLogs(a[33m.[39maudit_logs)[33m;[39m
+     [90m 105 |[39m     } [36mcatch[39m (err) {[0m
+
+      at printWarning (node_modules/react-dom/cjs/react-dom.development.js:86:30)
+      at error (node_modules/react-dom/cjs/react-dom.development.js:60:7)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-dom/cjs/react-dom.development.js:27589:9)
+      at scheduleUpdateOnFiber (node_modules/react-dom/cjs/react-dom.development.js:25508:5)
+      at dispatchSetState (node_modules/react-dom/cjs/react-dom.development.js:17527:7)
+      at setUsers (app/admin/page.tsx:102:7)
+      at act (app/admin/page.tsx:133:7)
+
+    console.error
+      Warning: An update to AdminPage inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at 
+https://reactjs.org/link/wrap-tests-with-act
+          at AdminPage (C:\Users\akhil\OneDrive\Desktop\Exam_craft_ai\frontend\app\admin\page.tsx:85:33)
+
+    [0m [90m 101 |[39m       [36mconst[39m [u[33m,[39m p[33m,[39m a] [33m=[39m [36mawait[39m 
+[33mPromise[39m[33m.[39mall([listAdminUsers()[33m,[39m listPendingFaculty()[33m,[39m listAuditLogs()])[33m;[39m
+     [90m 102 |[39m       setUsers(u[33m.[39musers)[33m;[39m
+    [31m[1m>[22m[39m[90m 103 |[39m       setPending(p[33m.[39musers)[33m;[39m
+     [90m     |[39m       [31m[1m^[22m[39m
+     [90m 104 |[39m       setAuditLogs(a[33m.[39maudit_logs)[33m;[39m
+     [90m 105 |[39m     } [36mcatch[39m (err) {
+     [90m 106 |[39m       setError(err [36minstanceof[39m [33mError[39m [33m?[39m err[33m.[39mmessage [33m:[39m 
+[32m'Failed to load admin data.'[39m)[33m;[39m[0m
+
+      at printWarning (node_modules/react-dom/cjs/react-dom.development.js:86:30)
+      at error (node_modules/react-dom/cjs/react-dom.development.js:60:7)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-dom/cjs/react-dom.development.js:27589:9)
+      at scheduleUpdateOnFiber (node_modules/react-dom/cjs/react-dom.development.js:25508:5)
+      at dispatchSetState (node_modules/react-dom/cjs/react-dom.development.js:17527:7)
+      at setPending (app/admin/page.tsx:103:7)
+      at act (app/admin/page.tsx:133:7)
+
+    console.error
+      Warning: An update to AdminPage inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at 
+https://reactjs.org/link/wrap-tests-with-act
+          at AdminPage (C:\Users\akhil\OneDrive\Desktop\Exam_craft_ai\frontend\app\admin\page.tsx:85:33)
+
+    [0m [90m 102 |[39m       setUsers(u[33m.[39musers)[33m;[39m
+     [90m 103 |[39m       setPending(p[33m.[39musers)[33m;[39m
+    [31m[1m>[22m[39m[90m 104 |[39m       setAuditLogs(a[33m.[39maudit_logs)[33m;[39m
+     [90m     |[39m       [31m[1m^[22m[39m
+     [90m 105 |[39m     } [36mcatch[39m (err) {
+     [90m 106 |[39m       setError(err [36minstanceof[39m [33mError[39m [33m?[39m err[33m.[39mmessage [33m:[39m 
+[32m'Failed to load admin data.'[39m)[33m;[39m
+     [90m 107 |[39m     } [36mfinally[39m {[0m
+
+      at printWarning (node_modules/react-dom/cjs/react-dom.development.js:86:30)
+      at error (node_modules/react-dom/cjs/react-dom.development.js:60:7)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-dom/cjs/react-dom.development.js:27589:9)
+      at scheduleUpdateOnFiber (node_modules/react-dom/cjs/react-dom.development.js:25508:5)
+      at dispatchSetState (node_modules/react-dom/cjs/react-dom.development.js:17527:7)
+      at setAuditLogs (app/admin/page.tsx:104:7)
+      at act (app/admin/page.tsx:133:7)
+
+    console.error
+      Warning: An update to AdminPage inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at 
+https://reactjs.org/link/wrap-tests-with-act
+          at AdminPage (C:\Users\akhil\OneDrive\Desktop\Exam_craft_ai\frontend\app\admin\page.tsx:85:33)
+
+    [0m [90m 106 |[39m       setError(err [36minstanceof[39m [33mError[39m [33m?[39m err[33m.[39mmessage [33m:[39m 
+[32m'Failed to load admin data.'[39m)[33m;[39m
+     [90m 107 |[39m     } [36mfinally[39m {
+    [31m[1m>[22m[39m[90m 108 |[39m       setLoading([36mfalse[39m)[33m;[39m
+     [90m     |[39m       [31m[1m^[22m[39m
+     [90m 109 |[39m     }
+     [90m 110 |[39m   }
+     [90m 111 |[39m[0m
+
+      at printWarning (node_modules/react-dom/cjs/react-dom.development.js:86:30)
+      at error (node_modules/react-dom/cjs/react-dom.development.js:60:7)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-dom/cjs/react-dom.development.js:27589:9)
+      at scheduleUpdateOnFiber (node_modules/react-dom/cjs/react-dom.development.js:25508:5)
+      at dispatchSetState (node_modules/react-dom/cjs/react-dom.development.js:17527:7)
+      at setLoading (app/admin/page.tsx:108:7)
+      at act (app/admin/page.tsx:133:7)
+
+    console.error
+      Warning: An update to AdminPage inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at 
+https://reactjs.org/link/wrap-tests-with-act
+          at AdminPage (C:\Users\akhil\OneDrive\Desktop\Exam_craft_ai\frontend\app\admin\page.tsx:85:33)
+
+    [0m [90m 136 |[39m     } [36mfinally[39m {
+     [90m 137 |[39m       busyRef[33m.[39mcurrent [33m=[39m [36mfalse[39m[33m;[39m
+    [31m[1m>[22m[39m[90m 138 |[39m       setBusyId([36mnull[39m)[33m;[39m
+     [90m     |[39m       [31m[1m^[22m[39m
+     [90m 139 |[39m     }
+     [90m 140 |[39m   }
+     [90m 141 |[39m[0m
+
+      at printWarning (node_modules/react-dom/cjs/react-dom.development.js:86:30)
+      at error (node_modules/react-dom/cjs/react-dom.development.js:60:7)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-dom/cjs/react-dom.development.js:27589:9)
+      at scheduleUpdateOnFiber (node_modules/react-dom/cjs/react-dom.development.js:25508:5)
+      at dispatchSetState (node_modules/react-dom/cjs/react-dom.development.js:17527:7)
+      at setBusyId (app/admin/page.tsx:138:7)
+
+PASS __tests__/generation-progress.test.tsx
+PASS __tests__/generation-helpers.test.ts
+PASS __tests__/list-keys.test.ts
+PASS __tests__/syllabus-guide.test.ts
+PASS __tests__/dashboard-recent.test.tsx (19.975 s)
+  ΓùÅ Console
+
+    console.error
+      Warning: An update to DashboardPage inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at 
+https://reactjs.org/link/wrap-tests-with-act
+          at DashboardPage (C:\Users\akhil\OneDrive\Desktop\Exam_craft_ai\frontend\app\dashboard\page.tsx:45:37)
+
+    [0m [90m 53 |[39m       [33m.[39mthen((items) [33m=>[39m {
+     [90m 54 |[39m         [36mif[39m (cancelled) [36mreturn[39m[33m;[39m
+    [31m[1m>[22m[39m[90m 55 |[39m         setPapers(items)[33m;[39m
+     [90m    |[39m         [31m[1m^[22m[39m
+     [90m 56 |[39m         setState([32m"ready"[39m)[33m;[39m
+     [90m 57 |[39m       })
+     [90m 58 |[39m       [33m.[39m[36mcatch[39m(() [33m=>[39m {[0m
+
+      at printWarning (node_modules/react-dom/cjs/react-dom.development.js:86:30)
+      at error (node_modules/react-dom/cjs/react-dom.development.js:60:7)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-dom/cjs/react-dom.development.js:27589:9)
+      at scheduleUpdateOnFiber (node_modules/react-dom/cjs/react-dom.development.js:25508:5)
+      at dispatchSetState (node_modules/react-dom/cjs/react-dom.development.js:17527:7)
+      at setPapers (app/dashboard/page.tsx:55:9)
+
+    console.error
+      Warning: An update to DashboardPage inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at 
+https://reactjs.org/link/wrap-tests-with-act
+          at DashboardPage (C:\Users\akhil\OneDrive\Desktop\Exam_craft_ai\frontend\app\dashboard\page.tsx:45:37)
+
+    [0m [90m 54 |[39m         [36mif[39m (cancelled) [36mreturn[39m[33m;[39m
+     [90m 55 |[39m         setPapers(items)[33m;[39m
+    [31m[1m>[22m[39m[90m 56 |[39m         setState([32m"ready"[39m)[33m;[39m
+     [90m    |[39m         [31m[1m^[22m[39m
+     [90m 57 |[39m       })
+     [90m 58 |[39m       [33m.[39m[36mcatch[39m(() [33m=>[39m {
+     [90m 59 |[39m         [36mif[39m (cancelled) [36mreturn[39m[33m;[39m[0m
+
+      at printWarning (node_modules/react-dom/cjs/react-dom.development.js:86:30)
+      at error (node_modules/react-dom/cjs/react-dom.development.js:60:7)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-dom/cjs/react-dom.development.js:27589:9)
+      at scheduleUpdateOnFiber (node_modules/react-dom/cjs/react-dom.development.js:25508:5)
+      at dispatchSetState (node_modules/react-dom/cjs/react-dom.development.js:17527:7)
+      at setState (app/dashboard/page.tsx:56:9)
+
+    console.error
+      Warning: An update to DashboardPage inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at 
+https://reactjs.org/link/wrap-tests-with-act
+          at DashboardPage (C:\Users\akhil\OneDrive\Desktop\Exam_craft_ai\frontend\app\dashboard\page.tsx:45:37)
+
+    [0m [90m 53 |[39m       [33m.[39mthen((items) [33m=>[39m {
+     [90m 54 |[39m         [36mif[39m (cancelled) [36mreturn[39m[33m;[39m
+    [31m[1m>[22m[39m[90m 55 |[39m         setPapers(items)[33m;[39m
+     [90m    |[39m         [31m[1m^[22m[39m
+     [90m 56 |[39m         setState([32m"ready"[39m)[33m;[39m
+     [90m 57 |[39m       })
+     [90m 58 |[39m       [33m.[39m[36mcatch[39m(() [33m=>[39m {[0m
+
+      at printWarning (node_modules/react-dom/cjs/react-dom.development.js:86:30)
+      at error (node_modules/react-dom/cjs/react-dom.development.js:60:7)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-dom/cjs/react-dom.development.js:27589:9)
+      at scheduleUpdateOnFiber (node_modules/react-dom/cjs/react-dom.development.js:25508:5)
+      at dispatchSetState (node_modules/react-dom/cjs/react-dom.development.js:17527:7)
+      at setPapers (app/dashboard/page.tsx:55:9)
+
+    console.error
+      Warning: An update to DashboardPage inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at 
+https://reactjs.org/link/wrap-tests-with-act
+          at DashboardPage (C:\Users\akhil\OneDrive\Desktop\Exam_craft_ai\frontend\app\dashboard\page.tsx:45:37)
+
+    [0m [90m 54 |[39m         [36mif[39m (cancelled) [36mreturn[39m[33m;[39m
+     [90m 55 |[39m         setPapers(items)[33m;[39m
+    [31m[1m>[22m[39m[90m 56 |[39m         setState([32m"ready"[39m)[33m;[39m
+     [90m    |[39m         [31m[1m^[22m[39m
+     [90m 57 |[39m       })
+     [90m 58 |[39m       [33m.[39m[36mcatch[39m(() [33m=>[39m {
+     [90m 59 |[39m         [36mif[39m (cancelled) [36mreturn[39m[33m;[39m[0m
+
+      at printWarning (node_modules/react-dom/cjs/react-dom.development.js:86:30)
+      at error (node_modules/react-dom/cjs/react-dom.development.js:60:7)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-dom/cjs/react-dom.development.js:27589:9)
+      at scheduleUpdateOnFiber (node_modules/react-dom/cjs/react-dom.development.js:25508:5)
+      at dispatchSetState (node_modules/react-dom/cjs/react-dom.development.js:17527:7)
+      at setState (app/dashboard/page.tsx:56:9)
+
+PASS __tests__/composite-review.test.tsx (27.524 s)
+
+Test Suites: 19 passed, 19 total
+Tests:       164 passed, 164 total
+Snapshots:   0 total
+Time:        31.99 s, estimated 35 s
+Ran all test suites.

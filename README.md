@@ -1,5 +1,7 @@
 # AI-Based Question Paper Generation System Using Bloom's Taxonomy
 
+[![CI](https://github.com/Hema-Satya-Nikhil/Exam-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/Hema-Satya-Nikhil/Exam-ai/actions/workflows/ci.yml)
+
 A production-oriented monorepo for generating academic question papers with deterministic backend rules, versioned blueprints, structured NVIDIA LLM integration, review workflows, and auditable exports.
 
 ## Architecture
@@ -23,6 +25,24 @@ A production-oriented monorepo for generating academic question papers with dete
 2. Paste the NVIDIA API key into `NVIDIA_API_KEY` in the backend environment file only.
 3. Start PostgreSQL, backend, and frontend with Docker.
 4. Run migrations before generating papers.
+
+## Browser E2E (frontend)
+
+The Review workflow has a committed Playwright suite (`frontend/e2e/review.spec.ts`)
+that drives the real UI: FINAL CHECK states, Part A / Part B rendering, the OR
+divider, validation-gated export, regeneration, lock/unlock, and reload
+persistence.
+
+1. Start the backend (`uvicorn app.main:app --port 8000` from `backend/`) and
+   the frontend (`npm run dev` from `frontend/`).
+2. Seed one completed composite paper (runs a real generation, ~2 min):
+   `npm run e2e:seed`
+3. Run the suite with the printed id:
+   `E2E_PAPER_ID=<id> npm run e2e`
+
+Without `E2E_PAPER_ID` the paper-dependent specs skip with a clear message, so
+`npm run e2e` is safe to run at any time. First run also needs
+`npx playwright install chromium`.
 
 ## Environment Variables
 

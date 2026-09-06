@@ -9,7 +9,7 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from app.db.base import Base
-from app.models import academic, audit, generation  # noqa: F401
+from app.models import academic, audit, generation, password_reset, admin_access  # noqa: F401
 from app.core.config import settings
 
 config = context.config
