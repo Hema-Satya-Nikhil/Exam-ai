@@ -1,7 +1,11 @@
 import { clearTokens, getAccessToken, getRefreshToken, setTokens } from './auth';
 import type { CompositeQuestionIdentity } from './composite-review';
 
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000';
+const configuredApiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+if (process.env.NODE_ENV === 'production' && !configuredApiBaseUrl) {
+  throw new Error('NEXT_PUBLIC_API_BASE_URL must be configured for production builds.');
+}
+const apiBaseUrl = configuredApiBaseUrl ?? 'http://localhost:8000';
 
 export class ApiError extends Error {
   status: number;

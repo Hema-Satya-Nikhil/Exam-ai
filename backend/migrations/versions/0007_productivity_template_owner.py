@@ -1,15 +1,15 @@
 """Add ownership metadata for paper templates.
 
-Revision ID: 0002_productivity_template_owner
-Revises: 0001_initial_schema
+Revision ID: 0007_productivity_template_owner
+Revises: 0006_admin_requests
 """
 
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
-revision = "0002_productivity_template_owner"
-down_revision = "0001_initial_schema"
+revision = "0007_productivity_template_owner"
+down_revision = "0006_admin_requests"
 branch_labels = None
 depends_on = None
 
